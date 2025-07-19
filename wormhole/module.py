@@ -52,8 +52,8 @@ class Wormhole(commands.Cog):
         if message.author.bot:
             return
 
-        # Ignore commands (assuming prefix is '!')
-        if message.content.startswith('!'):
+        # Ignore commands
+        if message.content.startswith(self.bot.command_prefix):
             #await message.delete()
             return
 

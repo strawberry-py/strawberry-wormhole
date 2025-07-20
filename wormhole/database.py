@@ -1,10 +1,10 @@
 from __future__ import annotations
+
 from typing import Optional
 
-from sqlalchemy import Column, Integer, BigInteger, String
+from sqlalchemy import BigInteger, Column, Integer
 
 from pie.database import database, session
-
 
 
 class WormholeChannel(database.base):
@@ -15,27 +15,28 @@ class WormholeChannel(database.base):
     channel_id = Column(BigInteger)
 
     @classmethod
-    def add(cls, guild_id: int, channel_id: int) -> Item:
+    def add(cls, guild_id: int, channel_id: int) -> WormholeChannel:
         """
         Adds a new WormholeChannel entry to the database.
         """
-        query = cls(
-            guild_id=guild_id,
-            channel_id=channel_id
-        )
+        query = cls(guild_id=guild_id, channel_id=channel_id)
         session.add(query)
         session.commit()
         return query
 
     @classmethod
-    def get(cls, guild_id: int) -> Optional[Item]:
+    def get(cls, guild_id: int) -> Optional[WormholeChannel]:
         """
         Retrieves the first WormholeChannel with the given guild_id.
         TODO: Change to return a list if multiple entries can exist.
         """
-        query = session.query(cls).filter_by(
-            guild_id=guild_id,
-        ).one_or_none()
+        query = (
+            session.query(cls)
+            .filter_by(
+                guild_id=guild_id,
+            )
+            .one_or_none()
+        )
         return query
 
     @classmethod
@@ -44,14 +45,18 @@ class WormholeChannel(database.base):
         Removes the WormholeChannel entry matching the given guild_id and channel_id.
         Returns the number of rows deleted.
         """
-        query = session.query(cls).filter_by(
-            guild_id=guild_id,
-            channel_id=channel_id,
-        ).delete()
+        query = (
+            session.query(cls)
+            .filter_by(
+                guild_id=guild_id,
+                channel_id=channel_id,
+            )
+            .delete()
+        )
         return query
 
     @classmethod
-    def check_existenz(cls, channel_id: int) -> bool: # Movie reference hahaha
+    def check_existenz(cls, channel_id: int) -> bool:  # Movie reference hahaha
         """
         Checks whether an entry exists with the given channel_id.
         Returns True if exists, False otherwise.
@@ -59,7 +64,7 @@ class WormholeChannel(database.base):
         return session.query(cls).filter_by(channel_id=channel_id).first() is not None
 
     @classmethod
-    def get_channel_ids(cls) -> List[int]:
+    def get_channel_ids(cls) -> list[int]:
         """
         Returns a list of all channel_ids currently stored.
         """

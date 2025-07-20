@@ -1,13 +1,13 @@
-import discord
-from discord import app_commands
+import os
+import re
+
 from discord.ext import commands
 
 from pie import check, i18n, logger
 
-from .database import WormholeChannel # Local database model for managing wormhole channels
-
-import re
-import os
+from .database import (  # Local database model for managing wormhole channels
+    WormholeChannel,
+)
 
 # Setup for internationalization (i18n) and logging
 _ = i18n.Translator(__file__).translate
@@ -17,22 +17,32 @@ guild_log = logger.Guild.logger()
 # ID of the guild (server) that hosts custom emojis
 emoji_guild_id = int(os.getenv("EMOJI_GUILD"))
 
+
 # Helper function to format messages before sending
 def _message_formatter(self, message):
-        guild = message.guild
-        guild_name = guild.name if guild else "Unknown Server"
-        
-        emoji_guild = self.bot.get_guild(emoji_guild_id)
-        emoji = None
-        if emoji_guild:
-            emoji = next((e for e in emoji_guild.emojis if e.name.replace(" ", "").lower() == guild_name.replace(" ", "").lower()), None)
-        guild_display = str(emoji) if emoji else f"[{guild_name}]"
+    guild = message.guild
+    guild_name = guild.name if guild else "Unknown Server"
 
-        # Sanitize user mentions to prevent abuse across servers
-        new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
-        
-        formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
-        return formatted_message
+    emoji_guild = self.bot.get_guild(emoji_guild_id)
+    emoji = None
+    if emoji_guild:
+        emoji = next(
+            (
+                e
+                for e in emoji_guild.emojis
+                if e.name.replace(" ", "").lower()
+                == guild_name.replace(" ", "").lower()
+            ),
+            None,
+        )
+    guild_display = str(emoji) if emoji else f"[{guild_name}]"
+
+    # Sanitize user mentions to prevent abuse across servers
+    new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
+
+    formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
+    return formatted_message
+
 
 class Wormhole(commands.Cog):
     """
@@ -54,7 +64,7 @@ class Wormhole(commands.Cog):
 
         # Ignore commands
         if message.content.startswith(self.bot.command_prefix):
-            #await message.delete()
+            # await message.delete()
             return
 
         # Only proceed if this channel is registered as a wormhole
@@ -62,9 +72,9 @@ class Wormhole(commands.Cog):
         if message.channel.id not in channels:
             return
 
-        await message.delete() # Delete original user message
+        await message.delete()  # Delete original user message
 
-        formatted_message = _message_formatter(self, message) # Format message
+        formatted_message = _message_formatter(self, message)  # Format message
 
         # Send to all wormhole channels
         for channel in channels:
@@ -88,7 +98,7 @@ class Wormhole(commands.Cog):
 
     # Command: !wormhole set channel <channel_id>
     @commands.guild_only()
-    @check.acl2(check.ACLevel.GUILD_OWNER) # ACL rules
+    @check.acl2(check.ACLevel.GUILD_OWNER)  # ACL rules
     @set.command(name="channel")
     async def set_wormhole_channel(self, ctx, *, channel_id: str):
         """
@@ -105,17 +115,16 @@ class Wormhole(commands.Cog):
             await ctx.reply(f"`{channel_id}` is not a valid number.")
             return
 
-    
-        channel = ctx.guild.get_channel(cha_id)        
+        channel = ctx.guild.get_channel(cha_id)
         if channel is None:
             await ctx.reply("Channel not found.")
             return
-    
+
         if WormholeChannel.check_existenz(cha_id):
             await ctx.reply("Channel is already set as wormhole channel.")
             return
-        
-        WormholeChannel.add(guild_id = ctx.guild.id, channel_id = cha_id)
+
+        WormholeChannel.add(guild_id=ctx.guild.id, channel_id=cha_id)
         await ctx.reply(f"Channel `{channel.name}` was added as wormhole channel.")
         return
 
@@ -136,10 +145,10 @@ class Wormhole(commands.Cog):
         for channel in channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
-                await target_channel.edit(slowmode_delay = delay)
+                await target_channel.edit(slowmode_delay=delay)
 
         await ctx.reply("Slow mode set")
-            
+
     # Subgroup: !wormhole remove
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole.group()
@@ -171,8 +180,8 @@ class Wormhole(commands.Cog):
         if not WormholeChannel.check_existenz(cha_id):
             await ctx.reply("Channel is not set as wormhole channel.")
             return
-        
-        WormholeChannel.remove(guild_id = ctx.guild.id, channel_id = cha_id)
+
+        WormholeChannel.remove(guild_id=ctx.guild.id, channel_id=cha_id)
         await ctx.reply(f"Channel `{channel.name}` was removed as wormhole channel.")
         return
 
@@ -187,9 +196,10 @@ class Wormhole(commands.Cog):
         for channel in channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
-                await target_channel.edit(slowmode_delay = 0)
+                await target_channel.edit(slowmode_delay=0)
 
         await ctx.reply("Slow mode removed")
+
 
 # Register the Cog with the bot
 async def setup(bot) -> None:

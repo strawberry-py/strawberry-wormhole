@@ -4,7 +4,7 @@ import re
 import discord
 from discord.ext import commands
 
-from pie import check, i18n, logger
+from pie import check, i18n, logger, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
@@ -12,7 +12,7 @@ from .database import (  # Local database model for managing wormhole channels
 )
 
 # Setup for internationalization (i18n) and logging
-_ = i18n.Translator(__file__).translate
+_ = i18n.Translator("modules/wormhole").translate
 bot_log = logger.Bot.logger()
 guild_log = logger.Guild.logger()
 
@@ -85,14 +85,14 @@ class Wormhole(commands.Cog):
     @commands.group()
     async def wormhole(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid wormhole command.")
+            await utils.discord.send_help(ctx)
 
     # Subgroup: !wormhole set
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole.group()
     async def set(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid set command under wormhole.")
+            await utils.discord.send_help(ctx)
 
     # Command: !wormhole set channel <channel_id>
     @commands.guild_only()
@@ -104,26 +104,34 @@ class Wormhole(commands.Cog):
         will be deleted and mirrored to all other wormhole channels.
         """
         if channel_id is None:
-            await ctx.reply("Channel ID is empty.")
+            await ctx.reply(_(ctx, "Channel ID is empty."))
             return
 
         try:
             cha_id = int(channel_id)
         except (ValueError, TypeError):
-            await ctx.reply(f"`{channel_id}` is not a valid number.")
+            await ctx.reply(
+                _(ctx, "`{channel_id}` is not a valid number.").format(
+                    channel_id=channel_id
+                )
+            )
             return
 
         channel = ctx.guild.get_channel(cha_id)
         if channel is None:
-            await ctx.reply("Channel not found.")
+            await ctx.reply(_(ctx, "Channel not found."))
             return
 
         if WormholeChannel.check_existence(cha_id):
-            await ctx.reply("Channel is already set as wormhole channel.")
+            await ctx.reply(_(ctx, "Channel is already set as wormhole channel."))
             return
 
         WormholeChannel.add(guild_id=ctx.guild.id, channel_id=cha_id)
-        await ctx.reply(f"Channel `{channel.name}` was added as wormhole channel.")
+        await ctx.reply(
+            _(ctx, "Channel `{channel_name}` was added as wormhole channel.").format(
+                channel_name=channel.name
+            )
+        )
         return
 
     # Command: !wormhole set slowmode <seconds>
@@ -136,7 +144,7 @@ class Wormhole(commands.Cog):
         try:
             delay = int(time)
         except (ValueError, TypeError):
-            await ctx.reply(f"`{time}` is not a valid number.")
+            await ctx.reply(_(ctx, "`{time}` is not a valid number.").format(time=time))
             return
 
         channels = WormholeChannel.get_channel_ids()
@@ -145,14 +153,14 @@ class Wormhole(commands.Cog):
             if target_channel:
                 await target_channel.edit(slowmode_delay=delay)
 
-        await ctx.reply("Slow mode set")
+        await ctx.reply(_(ctx, "Slow mode set."))
 
     # Subgroup: !wormhole remove
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole.group()
     async def remove(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid set command under wormhole.")
+            await utils.discord.send_help(ctx)
 
     # Command: !wormhole remove channel <channel_id>
     @commands.guild_only()
@@ -161,26 +169,34 @@ class Wormhole(commands.Cog):
     async def unset_wormhole_channel(self, ctx: commands.Context, *, channel_id: str):
         """Unregister a channel from the wormhole."""
         if channel_id is None:
-            await ctx.reply("Channel ID is empty.")
+            await ctx.reply(_(ctx, "Channel ID is empty."))
             return
 
         try:
             cha_id = int(channel_id)
         except (ValueError, TypeError):
-            await ctx.reply(f"`{channel_id}` is not a valid number.")
+            await ctx.reply(
+                _(ctx, "`{channel_id}` is not a valid number.").format(
+                    channel_id=channel_id
+                )
+            )
             return
 
         channel = ctx.guild.get_channel(cha_id)
         if channel is None:
-            await ctx.reply("Channel not found.")
+            await ctx.reply(_(ctx, "Channel not found."))
             return
 
         if not WormholeChannel.check_existence(cha_id):
-            await ctx.reply("Channel is not set as wormhole channel.")
+            await ctx.reply(_(ctx, "Channel is not set as wormhole channel."))
             return
 
         WormholeChannel.remove(guild_id=ctx.guild.id, channel_id=cha_id)
-        await ctx.reply(f"Channel `{channel.name}` was removed as wormhole channel.")
+        await ctx.reply(
+            _(ctx, "Channel `{channel_name}` was removed as wormhole channel.").format(
+                channel_name=channel.name
+            )
+        )
         return
 
     # Command: !wormhole remove slowmode
@@ -196,7 +212,7 @@ class Wormhole(commands.Cog):
             if target_channel:
                 await target_channel.edit(slowmode_delay=0)
 
-        await ctx.reply("Slow mode removed")
+        await ctx.reply(_(ctx, "Slow mode removed"))
 
 
 # Register the Cog with the bot

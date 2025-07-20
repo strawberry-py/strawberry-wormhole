@@ -124,6 +124,11 @@ class Wormhole(commands.Cog):
 
         WormholeChannel.add(guild_id=ctx.guild.id, channel_id=cha_id)
         await ctx.reply(f"Channel `{channel.name}` was added as wormhole channel.")
+        await guild_log.info(
+            ctx.author,
+            ctx.channel,
+            f"Channel '{channel.name}' was added as wormhole channel.",
+        )
         return
 
     # Command: !wormhole set slowmode <seconds>
@@ -146,6 +151,10 @@ class Wormhole(commands.Cog):
                 await target_channel.edit(slowmode_delay=delay)
 
         await ctx.reply("Slow mode set")
+        await bot_log.info(
+            ctx.author, ctx.channel, f"Wormhole slow mode set to {delay} seconds."
+        )
+        return
 
     # Subgroup: !wormhole remove
     @check.acl2(check.ACLevel.GUILD_OWNER)
@@ -181,6 +190,11 @@ class Wormhole(commands.Cog):
 
         WormholeChannel.remove(guild_id=ctx.guild.id, channel_id=cha_id)
         await ctx.reply(f"Channel `{channel.name}` was removed as wormhole channel.")
+        await guild_log.info(
+            ctx.author,
+            ctx.channel,
+            f"Channel '{channel.name}' was removed as wormhole channel.",
+        )
         return
 
     # Command: !wormhole remove slowmode
@@ -197,6 +211,10 @@ class Wormhole(commands.Cog):
                 await target_channel.edit(slowmode_delay=0)
 
         await ctx.reply("Slow mode removed")
+        await bot_log.info(
+            ctx.author, ctx.channel, "Wormhole slow mode set to 0 seconds."
+        )
+        return
 
 
 # Register the Cog with the bot

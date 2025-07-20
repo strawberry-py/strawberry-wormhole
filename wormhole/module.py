@@ -18,30 +18,6 @@ guild_log = logger.Guild.logger()
 emoji_guild_id = int(os.getenv("EMOJI_GUILD"))
 
 
-# Helper function to format messages before sending
-def _message_formatter(self, message):
-    guild = message.guild
-    guild_name = guild.name if guild else "Unknown Server"
-
-    emoji_guild = self.bot.get_guild(emoji_guild_id)
-    emoji = None
-    if emoji_guild:
-        emoji = next(
-            (
-                e
-                for e in emoji_guild.emojis
-                if e.name.replace(" ", "").lower()
-                == guild_name.replace(" ", "").lower()
-            ),
-            None,
-        )
-    guild_display = str(emoji) if emoji else f"[{guild_name}]"
-
-    # Sanitize user mentions to prevent abuse across servers
-    new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
-
-    formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
-    return formatted_message
 
 
 class Wormhole(commands.Cog):
@@ -51,6 +27,33 @@ class Wormhole(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+
+    # Helper function to format messages before sending
+    def _message_formatter(self, message):
+        guild = message.guild
+        guild_name = guild.name if guild else "Unknown Server"
+
+        emoji_guild = self.bot.get_guild(emoji_guild_id)
+        emoji = None
+        if emoji_guild:
+            emoji = next(
+                (
+                    e
+                    for e in emoji_guild.emojis
+                    if e.name.replace(" ", "").lower()
+                    == guild_name.replace(" ", "").lower()
+                ),
+                None,
+            )
+        guild_display = str(emoji) if emoji else f"[{guild_name}]"
+
+        # Sanitize user mentions to prevent abuse across servers
+        new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
+
+        formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
+        return formatted_message
+
 
     # Listen to all messages in channels
     @commands.Cog.listener()
@@ -74,7 +77,7 @@ class Wormhole(commands.Cog):
 
         await message.delete()  # Delete original user message
 
-        formatted_message = _message_formatter(self, message)  # Format message
+        formatted_message = self._message_formatter(message)  # Format message
 
         # Send to all wormhole channels
         for channel in channels:

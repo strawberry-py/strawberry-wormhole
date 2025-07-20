@@ -1,9 +1,11 @@
 import os
 import re
 
+import discord
 from discord.ext import commands
 
 from pie import check, i18n, logger
+from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
     WormholeChannel,
@@ -18,19 +20,16 @@ guild_log = logger.Guild.logger()
 emoji_guild_id = int(os.getenv("EMOJI_GUILD"))
 
 
-
-
 class Wormhole(commands.Cog):
     """
     This Cog handles message relaying (a "wormhole") across multiple channels in different guilds.
     """
 
-    def __init__(self, bot):
-        self.bot = bot
-
+    def __init__(self, bot: Strawberry):
+        self.bot: Strawberry = bot
 
     # Helper function to format messages before sending
-    def _message_formatter(self, message):
+    def _message_formatter(self, message: discord.Message):
         guild = message.guild
         guild_name = guild.name if guild else "Unknown Server"
 
@@ -54,10 +53,9 @@ class Wormhole(commands.Cog):
         formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
         return formatted_message
 
-
     # Listen to all messages in channels
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         # Ignore bot messages
         if message.author.bot:
             return
@@ -85,14 +83,14 @@ class Wormhole(commands.Cog):
     # Command group: !wormhole
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @commands.group()
-    async def wormhole(self, ctx):
+    async def wormhole(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid wormhole command.")
 
     # Subgroup: !wormhole set
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole.group()
-    async def set(self, ctx):
+    async def set(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid set command under wormhole.")
 
@@ -100,7 +98,7 @@ class Wormhole(commands.Cog):
     @commands.guild_only()
     @check.acl2(check.ACLevel.GUILD_OWNER)  # ACL rules
     @set.command(name="channel")
-    async def set_wormhole_channel(self, ctx, *, channel_id: str):
+    async def set_wormhole_channel(self, ctx: commands.Context, *, channel_id: str):
         """
         Register a channel as a wormhole. All messages in this channel
         will be deleted and mirrored to all other wormhole channels.
@@ -133,7 +131,7 @@ class Wormhole(commands.Cog):
     @commands.guild_only()
     @check.acl2(check.ACLevel.BOT_OWNER)
     @set.command(name="slowmode")
-    async def set_wormhole_slowmode(self, ctx, *, time: str):
+    async def set_wormhole_slowmode(self, ctx: commands.Context, *, time: str):
         """Apply slowmode to all wormhole channels."""
         try:
             delay = int(time)
@@ -152,7 +150,7 @@ class Wormhole(commands.Cog):
     # Subgroup: !wormhole remove
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole.group()
-    async def remove(self, ctx):
+    async def remove(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid set command under wormhole.")
 
@@ -160,7 +158,7 @@ class Wormhole(commands.Cog):
     @commands.guild_only()
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @remove.command(name="channel")
-    async def unset_wormhole_channel(self, ctx, *, channel_id: str):
+    async def unset_wormhole_channel(self, ctx: commands.Context, *, channel_id: str):
         """Unregister a channel from the wormhole."""
         if channel_id is None:
             await ctx.reply("Channel ID is empty.")
@@ -190,7 +188,7 @@ class Wormhole(commands.Cog):
     @commands.guild_only()
     @check.acl2(check.ACLevel.BOT_OWNER)
     @remove.command(name="slowmode")
-    async def remove_wormhole_slowmode(self, ctx):
+    async def remove_wormhole_slowmode(self, ctx: commands.Context):
         """Disable slowmode in all wormhole channels."""
         channels = WormholeChannel.get_channel_ids()
         for channel in channels:
@@ -202,5 +200,5 @@ class Wormhole(commands.Cog):
 
 
 # Register the Cog with the bot
-async def setup(bot) -> None:
+async def setup(bot: Strawberry) -> None:
     await bot.add_cog(Wormhole(bot))

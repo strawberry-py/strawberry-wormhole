@@ -56,7 +56,7 @@ class WormholeChannel(database.base):
         return query
 
     @classmethod
-    def check_existenz(cls, channel_id: int) -> bool:  # Movie reference hahaha
+    def check_existence(cls, channel_id: int) -> bool:
         """
         Checks whether an entry exists with the given channel_id.
         Returns True if exists, False otherwise.

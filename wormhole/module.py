@@ -120,7 +120,7 @@ class Wormhole(commands.Cog):
             await ctx.reply("Channel not found.")
             return
 
-        if WormholeChannel.check_existenz(cha_id):
+        if WormholeChannel.check_existence(cha_id):
             await ctx.reply("Channel is already set as wormhole channel.")
             return
 
@@ -177,7 +177,7 @@ class Wormhole(commands.Cog):
             await ctx.reply("Channel not found.")
             return
 
-        if not WormholeChannel.check_existenz(cha_id):
+        if not WormholeChannel.check_existence(cha_id):
             await ctx.reply("Channel is not set as wormhole channel.")
             return
 

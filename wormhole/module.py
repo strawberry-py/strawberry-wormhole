@@ -59,9 +59,6 @@ class Wormhole(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         # Ignore bot messages
-        if message.author == self.bot.user:
-            return
-
         if message.author.bot:
             return
 

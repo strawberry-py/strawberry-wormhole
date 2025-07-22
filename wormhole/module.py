@@ -25,8 +25,11 @@ class Wormhole(commands.Cog):
     This Cog handles message relaying (a "wormhole") across multiple channels in different guilds.
     """
 
+    wormhole_channels: list[int] = []
+
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
+        self.wormhole_channels = WormholeChannel.get_channel_ids()
 
     # Helper function to format messages before sending
     def _message_formatter(self, message: discord.Message):
@@ -66,8 +69,7 @@ class Wormhole(commands.Cog):
             return
 
         # Only proceed if this channel is registered as a wormhole
-        channels = WormholeChannel.get_channel_ids()
-        if message.channel.id not in channels:
+        if message.channel.id not in self.wormhole_channels:
             return
 
         await message.delete()  # Delete original user message
@@ -75,7 +77,7 @@ class Wormhole(commands.Cog):
         formatted_message = self._message_formatter(message)  # Format message
 
         # Send to all wormhole channels
-        for channel in channels:
+        for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
                 await target_channel.send(formatted_message)
@@ -123,6 +125,7 @@ class Wormhole(commands.Cog):
             return
 
         WormholeChannel.add(guild_id=ctx.guild.id, channel_id=cha_id)
+        self.wormhole_channels.append(cha_id)
         await ctx.reply(f"Channel `{channel.name}` was added as wormhole channel.")
         return
 
@@ -139,8 +142,7 @@ class Wormhole(commands.Cog):
             await ctx.reply(f"`{time}` is not a valid number.")
             return
 
-        channels = WormholeChannel.get_channel_ids()
-        for channel in channels:
+        for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
                 await target_channel.edit(slowmode_delay=delay)
@@ -180,6 +182,7 @@ class Wormhole(commands.Cog):
             return
 
         WormholeChannel.remove(guild_id=ctx.guild.id, channel_id=cha_id)
+        self.wormhole_channels.remove(cha_id)
         await ctx.reply(f"Channel `{channel.name}` was removed as wormhole channel.")
         return
 
@@ -190,8 +193,7 @@ class Wormhole(commands.Cog):
     @remove.command(name="slowmode")
     async def remove_wormhole_slowmode(self, ctx: commands.Context):
         """Disable slowmode in all wormhole channels."""
-        channels = WormholeChannel.get_channel_ids()
-        for channel in channels:
+        for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
                 await target_channel.edit(slowmode_delay=0)

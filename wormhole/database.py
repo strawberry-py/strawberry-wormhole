@@ -53,6 +53,7 @@ class WormholeChannel(database.base):
             )
             .delete()
         )
+        session.commit()
         return query
 
     @classmethod

@@ -2,9 +2,9 @@ import os
 import re
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from pie import check, i18n, logger, utils
+from pie import check, i18n, logger, storage, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
@@ -30,6 +30,17 @@ class Wormhole(commands.Cog):
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
+        self.restore_slowmode.start()
+
+    @tasks.loop(seconds=2.0, count=1)
+    async def restore_slowmode(self):
+        delay = storage.get(self, 0, key="wormhole_slowmode")
+        await self._set_slowmode(delay)
+
+    @restore_slowmode.before_loop
+    async def before_restore_slowmode(self):
+        """Ensures that bot is ready before registering"""
+        await self.bot.wait_until_ready()
 
     # Helper function to format messages before sending
     def _message_formatter(self, message: discord.Message):
@@ -140,26 +151,33 @@ class Wormhole(commands.Cog):
             ctx.channel,
             f"Channel '{channel.name}' was added as wormhole channel.",
         )
+
+        delay = storage.get(self, 0, key="wormhole_slowmode")
+        await channel.edit(slowmode_delay=delay)
         return
+
+    async def _set_slowmode(self, delay: int):
+        for channel in self.wormhole_channels:
+            target_channel = self.bot.get_channel(channel)
+            if target_channel:
+                await target_channel.edit(slowmode_delay=delay)
 
     # Command: !wormhole set slowmode <seconds>
     # requires manage_channels permission
     @commands.guild_only()
     @check.acl2(check.ACLevel.BOT_OWNER)
     @set.command(name="slowmode")
-    async def set_wormhole_slowmode(self, ctx: commands.Context, *, time: str):
+    async def set_wormhole_slowmode(self, ctx: commands.Context, delay: int):
         """Apply slowmode to all wormhole channels."""
-        try:
-            delay = int(time)
-        except (ValueError, TypeError):
-            await ctx.reply(_(ctx, "`{time}` is not a valid number.").format(time=time))
+        if delay < 0:
+            await ctx.reply(
+                _(ctx, "`{time}` is not a valid number.").format(time=delay)
+            )
             return
 
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
-            if target_channel:
-                await target_channel.edit(slowmode_delay=delay)
+        await self._set_slowmode(delay)
 
+        storage.set(self, 0, key="wormhole_slowmode", value=delay)
         await ctx.reply(_(ctx, "Slow mode set."))
         await bot_log.info(
             ctx.author, ctx.channel, f"Wormhole slow mode set to {delay} seconds."
@@ -214,6 +232,8 @@ class Wormhole(commands.Cog):
             ctx.channel,
             f"Channel '{channel.name}' was removed as wormhole channel.",
         )
+
+        await channel.edit(slowmode_delay=0)
         return
 
     # Command: !wormhole remove slowmode
@@ -223,11 +243,9 @@ class Wormhole(commands.Cog):
     @remove.command(name="slowmode")
     async def remove_wormhole_slowmode(self, ctx: commands.Context):
         """Disable slowmode in all wormhole channels."""
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
-            if target_channel:
-                await target_channel.edit(slowmode_delay=0)
+        await self._set_slowmode(0)
 
+        storage.set(self, 0, key="wormhole_slowmode", value=0)
         await ctx.reply(_(ctx, "Slow mode removed"))
         await bot_log.info(
             ctx.author, ctx.channel, "Wormhole slow mode set to 0 seconds."

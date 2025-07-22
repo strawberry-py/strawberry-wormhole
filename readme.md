@@ -8,13 +8,7 @@ A wormhole extension for [strawberry.py](https://github.com/strawberry-py)
 
 ---
 
-Make sure to add the following environment variable to your .env file:
-
-```env
-EMOJI_GUILD=<your_emoji_guild_id>
-```
-
-This variable specifies the ID of the Discord guild where custom emojis for the wormhole are stored. You can create special custom emojis to replace guild names in messages. The name of each emoji should match the guild's name, converted to lowercase, no spaces,    ASCII characters only (if applicable). For the guild `ČVUT FEL`, the corresponding emoji should be named `cvutfel`.
+You can create special custom emojis to replace guild names in messages. These custom emojis are stored as application emojis and they can be uploaded in [discord developer portal](https://discord.com/developers/applications). The name of each emoji should match the guild's name, converted to lowercase, with spaces converted to `'_'`, ASCII characters only (if applicable). For the guild `ČVUT FEL`, the corresponding emoji should be named `cvut_fel`.
 
 ## Authors
 

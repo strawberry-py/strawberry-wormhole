@@ -43,22 +43,16 @@ class Wormhole(commands.Cog):
         await self.bot.wait_until_ready()
 
     # Helper function to format messages before sending
-    def _message_formatter(self, message: discord.Message):
+    async def _message_formatter(self, message: discord.Message):
         guild = message.guild
         guild_name = guild.name if guild else "Unknown Server"
 
-        emoji_guild = self.bot.get_guild(emoji_guild_id)
+        emojis = await self.bot.fetch_application_emojis()
         emoji = None
-        if emoji_guild:
-            emoji = next(
-                (
-                    e
-                    for e in emoji_guild.emojis
-                    if e.name.replace(" ", "").lower()
-                    == guild_name.replace(" ", "").lower()
-                ),
-                None,
-            )
+        for e in emojis:
+            if e.name == guild_name.replace(" ", "_").lower():
+                emoji = e
+                break
         guild_display = str(emoji) if emoji else f"[{guild_name}]"
 
         # Sanitize user mentions to prevent abuse across servers
@@ -85,7 +79,7 @@ class Wormhole(commands.Cog):
 
         await message.delete()  # Delete original user message
 
-        formatted_message = self._message_formatter(message)  # Format message
+        formatted_message = await self._message_formatter(message)  # Format message
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:

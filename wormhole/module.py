@@ -2,9 +2,10 @@ import os
 import re
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 
-from pie import check, i18n, logger, storage, utils
+from pie import check, i18n, logger, storage
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
@@ -26,6 +27,25 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
+
+    wormhole: app_commands.Group = app_commands.Group(
+        name="wormhole",
+        description="Set of configuration for wormhole.",
+        default_permissions=discord.Permissions(administrator=True),
+        guild_only=True,
+    )
+
+    wormhole_channel: app_commands.Group = app_commands.Group(
+        name="channel",
+        description="Set of configuration for wormhole channel.",
+        parent=wormhole,
+    )
+
+    wormhole_slowmode: app_commands.Group = app_commands.Group(
+        name="slowmode",
+        description="Set of configuration for wormhole slow mode.",
+        parent=wormhole,
+    )
 
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
@@ -87,62 +107,35 @@ class Wormhole(commands.Cog):
             if target_channel:
                 await target_channel.send(formatted_message)
 
-    # Command group: !wormhole
     @check.acl2(check.ACLevel.GUILD_OWNER)
-    @commands.group()
-    async def wormhole(self, ctx: commands.Context):
-        if ctx.invoked_subcommand is None:
-            await utils.discord.send_help(ctx)
-
-    # Subgroup: !wormhole set
-    @check.acl2(check.ACLevel.GUILD_OWNER)
-    @wormhole.group()
-    async def set(self, ctx: commands.Context):
-        if ctx.invoked_subcommand is None:
-            await utils.discord.send_help(ctx)
-
-    # Command: !wormhole set channel <channel_id>
-    @commands.guild_only()
-    @check.acl2(check.ACLevel.GUILD_OWNER)  # ACL rules
-    @set.command(name="channel")
-    async def set_wormhole_channel(self, ctx: commands.Context, *, channel_id: str):
+    @wormhole_channel.command(
+        name="set",
+        description="Register a channel as a wormhole. All messages in this channel will be deleted and mirrored.",
+    )
+    async def set_wormhole_channel(
+        self, itx: discord.Interaction, channel: discord.TextChannel
+    ):
         """
         Register a channel as a wormhole. All messages in this channel
         will be deleted and mirrored to all other wormhole channels.
         """
-        if channel_id is None:
-            await ctx.reply(_(ctx, "Channel ID is empty."))
-            return
-
-        try:
-            cha_id = int(channel_id)
-        except (ValueError, TypeError):
-            await ctx.reply(
-                _(ctx, "`{channel_id}` is not a valid number.").format(
-                    channel_id=channel_id
-                )
+        if WormholeChannel.check_existence(channel.id):
+            await itx.response.send_message(
+                _(itx, "Channel is already set as wormhole channel."), ephemeral=True
             )
             return
 
-        channel = ctx.guild.get_channel(cha_id)
-        if channel is None:
-            await ctx.reply(_(ctx, "Channel not found."))
-            return
-
-        if WormholeChannel.check_existence(cha_id):
-            await ctx.reply(_(ctx, "Channel is already set as wormhole channel."))
-            return
-
-        WormholeChannel.add(guild_id=ctx.guild.id, channel_id=cha_id)
-        self.wormhole_channels.append(cha_id)
-        await ctx.reply(
-            _(ctx, "Channel `{channel_name}` was added as wormhole channel.").format(
+        WormholeChannel.add(guild_id=itx.guild.id, channel_id=channel.id)
+        self.wormhole_channels.append(channel.id)
+        await itx.response.send_message(
+            _(itx, "Channel `{channel_name}` was added as wormhole channel.").format(
                 channel_name=channel.name
-            )
+            ),
+            ephemeral=True,
         )
         await guild_log.info(
-            ctx.author,
-            ctx.channel,
+            itx.user,
+            itx.channel,
             f"Channel '{channel.name}' was added as wormhole channel.",
         )
 
@@ -156,93 +149,76 @@ class Wormhole(commands.Cog):
             if target_channel:
                 await target_channel.edit(slowmode_delay=delay)
 
-    # Command: !wormhole set slowmode <seconds>
     # requires manage_channels permission
-    @commands.guild_only()
     @check.acl2(check.ACLevel.BOT_OWNER)
-    @set.command(name="slowmode")
-    async def set_wormhole_slowmode(self, ctx: commands.Context, delay: int):
+    @wormhole_slowmode.command(
+        name="set",
+        description="Apply slowmode to all wormhole channels.",
+    )
+    @app_commands.describe(delay="Time in seconds")
+    async def set_wormhole_slowmode(self, itx: discord.Interaction, delay: int):
         """Apply slowmode to all wormhole channels."""
         if delay < 0:
-            await ctx.reply(
-                _(ctx, "`{time}` is not a valid number.").format(time=delay)
+            await itx.response.send_message(
+                _(itx, "Delay should be 0 or more.").format(time=delay),
+                ephemeral=True,
             )
             return
 
         await self._set_slowmode(delay)
 
         storage.set(self, 0, key="wormhole_slowmode", value=delay)
-        await ctx.reply(_(ctx, "Slow mode set."))
+        await itx.response.send_message(_(itx, "Slow mode set."), ephemeral=True)
         await bot_log.info(
-            ctx.author, ctx.channel, f"Wormhole slow mode set to {delay} seconds."
+            itx.user, itx.channel, f"Wormhole slow mode set to {delay} seconds."
         )
         return
 
-    # Subgroup: !wormhole remove
     @check.acl2(check.ACLevel.GUILD_OWNER)
-    @wormhole.group()
-    async def remove(self, ctx: commands.Context):
-        if ctx.invoked_subcommand is None:
-            await utils.discord.send_help(ctx)
-
-    # Command: !wormhole remove channel <channel_id>
-    @commands.guild_only()
-    @check.acl2(check.ACLevel.GUILD_OWNER)
-    @remove.command(name="channel")
-    async def unset_wormhole_channel(self, ctx: commands.Context, *, channel_id: str):
+    @wormhole_channel.command(
+        name="remove",
+        description="Unregister a channel from the wormhole.",
+    )
+    async def unset_wormhole_channel(
+        self, itx: discord.Interaction, channel: discord.TextChannel
+    ):
         """Unregister a channel from the wormhole."""
-        if channel_id is None:
-            await ctx.reply(_(ctx, "Channel ID is empty."))
-            return
-
-        try:
-            cha_id = int(channel_id)
-        except (ValueError, TypeError):
-            await ctx.reply(
-                _(ctx, "`{channel_id}` is not a valid number.").format(
-                    channel_id=channel_id
-                )
+        if not WormholeChannel.check_existence(channel.id):
+            await itx.response.send_message(
+                _(itx, "Channel is not set as wormhole channel."), ephemeral=True
             )
             return
 
-        channel = ctx.guild.get_channel(cha_id)
-        if channel is None:
-            await ctx.reply(_(ctx, "Channel not found."))
-            return
-
-        if not WormholeChannel.check_existence(cha_id):
-            await ctx.reply(_(ctx, "Channel is not set as wormhole channel."))
-            return
-
-        WormholeChannel.remove(guild_id=ctx.guild.id, channel_id=cha_id)
-        self.wormhole_channels.remove(cha_id)
-        await ctx.reply(
-            _(ctx, "Channel `{channel_name}` was removed as wormhole channel.").format(
+        WormholeChannel.remove(guild_id=itx.guild.id, channel_id=channel.id)
+        self.wormhole_channels.remove(channel.id)
+        await itx.response.send_message(
+            _(itx, "Channel `{channel_name}` was removed as wormhole channel.").format(
                 channel_name=channel.name
-            )
+            ),
+            ephemeral=True,
         )
         await guild_log.info(
-            ctx.author,
-            ctx.channel,
+            itx.user,
+            itx.channel,
             f"Channel '{channel.name}' was removed as wormhole channel.",
         )
 
         await channel.edit(slowmode_delay=0)
         return
 
-    # Command: !wormhole remove slowmode
-    # requires manage_channels permission
-    @commands.guild_only()
     @check.acl2(check.ACLevel.BOT_OWNER)
-    @remove.command(name="slowmode")
-    async def remove_wormhole_slowmode(self, ctx: commands.Context):
+    @wormhole_slowmode.command(
+        name="remove",
+        description="Disable slowmode in all wormhole channels.",
+    )
+    async def remove_wormhole_slowmode(self, itx: commands.Context):
         """Disable slowmode in all wormhole channels."""
         await self._set_slowmode(0)
 
         storage.set(self, 0, key="wormhole_slowmode", value=0)
-        await ctx.reply(_(ctx, "Slow mode removed"))
+        await itx.response.send_message(_(itx, "Slow mode removed"), ephemeral=True)
         await bot_log.info(
-            ctx.author, ctx.channel, "Wormhole slow mode set to 0 seconds."
+            itx.user, itx.channel, "Wormhole slow mode set to 0 seconds."
         )
         return
 

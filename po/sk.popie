@@ -1,20 +1,11 @@
-msgid Channel ID is empty.
-msgstr ID kanála je prázdne.
-
-msgid `{channel_id}` is not a valid number.
-msgstr `{channel_id}` nie je platné číslo.
-
-msgid Channel not found.
-msgstr Kanál nebol nájdený.
-
 msgid Channel is already set as wormhole channel.
 msgstr Kanál je už nastavený ako wormhole kanál.
 
 msgid Channel `{channel_name}` was added as wormhole channel.
 msgstr Kanál `{channel_name}` bol pridaný ako wormhole kanál.
 
-msgid `{time}` is not a valid number.
-msgstr `{time}` nie je platné číslo.
+msgid Delay should be 0 or more.
+msgstr Oneskorenie musí byť 0 alebo viac.
 
 msgid Slow mode set.
 msgstr Pomalý režim bol nastavený.

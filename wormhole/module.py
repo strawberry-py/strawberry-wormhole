@@ -55,7 +55,7 @@ class Wormhole(commands.Cog):
     @tasks.loop(seconds=2.0, count=1)
     async def restore_slowmode(self):
         delay = storage.get(self, 0, key="wormhole_slowmode")
-        await self._set_slowmode(delay)
+        await self._set_slowmode(None, delay)
 
     @restore_slowmode.before_loop
     async def before_restore_slowmode(self):
@@ -97,7 +97,14 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
-        await message.delete()  # Delete original user message
+        try:
+            await message.delete()  # Delete original user message
+        except discord.Forbidden:
+            await bot_log.warning(
+                message.author,
+                message.channel,
+                "Missing permissions to delete message.",
+            )
 
         formatted_message = await self._message_formatter(message)  # Format message
 
@@ -105,7 +112,14 @@ class Wormhole(commands.Cog):
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
-                await target_channel.send(formatted_message)
+                try:
+                    await target_channel.send(formatted_message)
+                except discord.Forbidden:
+                    await bot_log.warning(
+                        message.author,
+                        target_channel,
+                        "Missing permissions to send the message.",
+                    )
 
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole_channel.command(
@@ -125,6 +139,16 @@ class Wormhole(commands.Cog):
             )
             return
 
+        delay = storage.get(self, 0, key="wormhole_slowmode")
+        try:
+            await channel.edit(slowmode_delay=delay)
+        except discord.Forbidden:
+            await bot_log.warning(
+                itx.user,
+                itx.channel,
+                "Missing permissions to set wormhole slow mode. (TIP: Check if 'manage channel' is granted.)",
+            )
+
         WormholeChannel.add(guild_id=itx.guild.id, channel_id=channel.id)
         self.wormhole_channels.append(channel.id)
         await itx.response.send_message(
@@ -138,16 +162,36 @@ class Wormhole(commands.Cog):
             itx.channel,
             f"Channel '{channel.name}' was added as wormhole channel.",
         )
-
-        delay = storage.get(self, 0, key="wormhole_slowmode")
-        await channel.edit(slowmode_delay=delay)
         return
 
-    async def _set_slowmode(self, delay: int):
+    async def _set_slowmode(self, itx: discord.Interaction, delay: int):
+        ret = []
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
-                await target_channel.edit(slowmode_delay=delay)
+                try:
+                    await target_channel.edit(slowmode_delay=delay)
+                except discord.Forbidden:
+                    ch = f"#{target_channel.name} ({target_channel.id}) {target_channel.guild.name}"
+                    ret.append(ch)
+
+        if ret:
+            channels = ",".join(ret)
+            await bot_log.warning(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"Missing permissions to set wormhole slow mode in channels {channels}. (TIP: Check if 'manage channel' is granted.)",
+            )
+            if itx:
+                await itx.response.send_message(
+                    _(
+                        itx,
+                        "I do not have proper permissions to set slow mode. Some channel may need manual intervention.",
+                    ),
+                    ephemeral=True,
+                )
+            return False
+        return True
 
     # requires manage_channels permission
     @check.acl2(check.ACLevel.BOT_OWNER)
@@ -165,9 +209,11 @@ class Wormhole(commands.Cog):
             )
             return
 
-        await self._set_slowmode(delay)
-
         storage.set(self, 0, key="wormhole_slowmode", value=delay)
+
+        if not await self._set_slowmode(itx, delay):
+            return
+
         await itx.response.send_message(_(itx, "Slow mode set."), ephemeral=True)
         await bot_log.info(
             itx.user, itx.channel, f"Wormhole slow mode set to {delay} seconds."
@@ -189,6 +235,15 @@ class Wormhole(commands.Cog):
             )
             return
 
+        try:
+            await channel.edit(slowmode_delay=0)
+        except discord.Forbidden:
+            await bot_log.warning(
+                itx.user,
+                itx.channel,
+                "Missing permissions to set ongoing slow mode. (TIP: Check if 'manage channel' is granted.)",
+            )
+
         WormholeChannel.remove(guild_id=itx.guild.id, channel_id=channel.id)
         self.wormhole_channels.remove(channel.id)
         await itx.response.send_message(
@@ -202,8 +257,6 @@ class Wormhole(commands.Cog):
             itx.channel,
             f"Channel '{channel.name}' was removed as wormhole channel.",
         )
-
-        await channel.edit(slowmode_delay=0)
         return
 
     @check.acl2(check.ACLevel.BOT_OWNER)
@@ -213,7 +266,8 @@ class Wormhole(commands.Cog):
     )
     async def remove_wormhole_slowmode(self, itx: commands.Context):
         """Disable slowmode in all wormhole channels."""
-        await self._set_slowmode(0)
+        if not await self._set_slowmode(itx, 0):
+            return
 
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await itx.response.send_message(_(itx, "Slow mode removed"), ephemeral=True)

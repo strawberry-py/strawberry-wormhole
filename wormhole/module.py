@@ -54,16 +54,22 @@ class Wormhole(commands.Cog):
 
     @tasks.loop(seconds=2.0, count=1)
     async def restore_slowmode(self):
+        """Task to restore the slowmode in wormhole channels after module load."""
         delay = storage.get(self, 0, key="wormhole_slowmode")
         await self._set_slowmode(None, delay)
 
     @restore_slowmode.before_loop
     async def before_restore_slowmode(self):
-        """Ensures that bot is ready before registering"""
+        """Ensures that bot is ready before restoring slowmode"""
         await self.bot.wait_until_ready()
 
     # Helper function to format messages before sending
     async def _message_formatter(self, message: discord.Message):
+        """Helper function to format wormhole message.
+
+        :param message: Discord message to format
+        :return: Formatted message text
+        """
         guild = message.guild
         guild_name = guild.name if guild else "Unknown Server"
 
@@ -84,13 +90,13 @@ class Wormhole(commands.Cog):
     # Listen to all messages in channels
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        """Main message relay logics."""
         # Ignore bot messages
         if message.author.bot:
             return
 
         # Ignore commands
         if message.content.startswith(self.bot.command_prefix):
-            # await message.delete()
             return
 
         # Only proceed if this channel is registered as a wormhole
@@ -165,6 +171,16 @@ class Wormhole(commands.Cog):
         return
 
     async def _set_slowmode(self, itx: discord.Interaction, delay: int):
+        """Helper function to set slowmode on Wormhole channels.
+
+        If False is returned, the ITX interaction was already handled.
+        If True is returned, the ITX interaction must be handled by the
+        following code.
+
+        :param itx: Discord interaction
+        :param delay: Slowmode delay to set
+        :return: True if no exception was raised, False otherwise
+        """
         ret = []
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)

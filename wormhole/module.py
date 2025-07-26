@@ -175,7 +175,7 @@ class Wormhole(commands.Cog):
 
     # COMMANDS
 
-    @check.acl2(check.ACLevel.GUILD_OWNER)
+    @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(
         name="set",
         description="Register a channel as a wormhole. All messages in this channel will be deleted and mirrored.",
@@ -218,7 +218,7 @@ class Wormhole(commands.Cog):
         )
         return
 
-    @check.acl2(check.ACLevel.GUILD_OWNER)
+    @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(
         name="remove",
         description="Unregister a channel from the wormhole.",

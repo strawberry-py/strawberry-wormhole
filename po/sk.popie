@@ -1,23 +1,20 @@
+msgid I do not have proper permissions to set slow mode. Some channel may need manual intervention.
+msgstr Nemám dostatočné oprávnenia na nastavenie spomaleného režimu. Niektoré kanály môžu vyžadovať manuálny zásah.
+
+msgid Slow mode set to {delay} seconds.
+msgstr Pomalý režim bol nastavený na {delay} sekund.
+
 msgid Channel is already set as wormhole channel.
 msgstr Kanál je už nastavený ako wormhole kanál.
 
 msgid Channel `{channel_name}` was added as wormhole channel.
 msgstr Kanál `{channel_name}` bol pridaný ako wormhole kanál.
 
-msgid I do not have proper permissions to set slow mode. Some channel may need manual intervention.
-msgstr Nemám dostatočné oprávnenia na nastavenie spomaleného režimu. Niektoré kanály môžu vyžadovať manuálny zásah.
-
 msgid Delay should be 0 or more.
 msgstr Oneskorenie musí byť 0 alebo viac.
-
-msgid Slow mode set.
-msgstr Pomalý režim bol nastavený.
 
 msgid Channel is not set as wormhole channel.
 msgstr Kanál nie je nastavený ako wormhole kanál.
 
 msgid Channel `{channel_name}` was removed as wormhole channel.
 msgstr Kanál `{channel_name}` bol odstránený ako wormhole kanál.
-
-msgid Slow mode removed
-msgstr Pomalý režim bol odstránený

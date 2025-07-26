@@ -1,6 +1,8 @@
 import os
 import re
 
+from typing import Optional
+
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -56,7 +58,7 @@ class Wormhole(commands.Cog):
     async def restore_slowmode(self):
         """Task to restore the slowmode in wormhole channels after module load."""
         delay = storage.get(self, 0, key="wormhole_slowmode")
-        await self._set_slowmode(None, delay)
+        await self._set_slowmode(delay)
 
     @restore_slowmode.before_loop
     async def before_restore_slowmode(self):
@@ -88,16 +90,15 @@ class Wormhole(commands.Cog):
         formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
         return formatted_message
 
-    async def _set_slowmode(self, itx: discord.Interaction, delay: int):
+    async def _set_slowmode(
+        self, delay: int, itx: Optional[discord.Interaction] = None
+    ):
         """Helper function to set slowmode on Wormhole channels.
 
-        If False is returned, the ITX interaction was already handled.
-        If True is returned, the ITX interaction must be handled by the
-        following code.
+        If ITX is provided, it also handles the interaction response.
 
-        :param itx: Discord interaction
         :param delay: Slowmode delay to set
-        :return: True if no exception was raised, False otherwise
+        :param itx: Discord interaction
         """
         ret = []
         for channel in self.wormhole_channels:
@@ -124,8 +125,17 @@ class Wormhole(commands.Cog):
                     ),
                     ephemeral=True,
                 )
-            return False
-        return True
+        else:
+            await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"Wormhole slow mode set to {delay} seconds.",
+            )
+            if itx:
+                await itx.response.send_message(
+                    _(itx, "Slow mode set to {delay} seconds.").format(delay=delay),
+                    ephemeral=True,
+                )
 
     # LISTENERS
 
@@ -230,15 +240,7 @@ class Wormhole(commands.Cog):
             return
 
         storage.set(self, 0, key="wormhole_slowmode", value=delay)
-
-        if not await self._set_slowmode(itx, delay):
-            return
-
-        await itx.response.send_message(_(itx, "Slow mode set."), ephemeral=True)
-        await bot_log.info(
-            itx.user, itx.channel, f"Wormhole slow mode set to {delay} seconds."
-        )
-        return
+        await self._set_slowmode(delay, itx)
 
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole_channel.command(
@@ -286,15 +288,8 @@ class Wormhole(commands.Cog):
     )
     async def remove_wormhole_slowmode(self, itx: commands.Context):
         """Disable slowmode in all wormhole channels."""
-        if not await self._set_slowmode(itx, 0):
-            return
-
         storage.set(self, 0, key="wormhole_slowmode", value=0)
-        await itx.response.send_message(_(itx, "Slow mode removed"), ephemeral=True)
-        await bot_log.info(
-            itx.user, itx.channel, "Wormhole slow mode set to 0 seconds."
-        )
-        return
+        await self._set_slowmode(0, itx)
 
 
 # Register the Cog with the bot

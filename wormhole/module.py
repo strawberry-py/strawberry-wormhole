@@ -63,7 +63,8 @@ class Wormhole(commands.Cog):
         """Ensures that bot is ready before restoring slowmode"""
         await self.bot.wait_until_ready()
 
-    # Helper function to format messages before sending
+    # HELPER FUNCTIONS
+
     async def _message_formatter(self, message: discord.Message):
         """Helper function to format wormhole message.
 
@@ -87,7 +88,47 @@ class Wormhole(commands.Cog):
         formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
         return formatted_message
 
-    # Listen to all messages in channels
+    async def _set_slowmode(self, itx: discord.Interaction, delay: int):
+        """Helper function to set slowmode on Wormhole channels.
+
+        If False is returned, the ITX interaction was already handled.
+        If True is returned, the ITX interaction must be handled by the
+        following code.
+
+        :param itx: Discord interaction
+        :param delay: Slowmode delay to set
+        :return: True if no exception was raised, False otherwise
+        """
+        ret = []
+        for channel in self.wormhole_channels:
+            target_channel = self.bot.get_channel(channel)
+            if target_channel:
+                try:
+                    await target_channel.edit(slowmode_delay=delay)
+                except discord.Forbidden:
+                    ch = f"#{target_channel.name} ({target_channel.id}) {target_channel.guild.name}"
+                    ret.append(ch)
+
+        if ret:
+            channels = ",".join(ret)
+            await bot_log.warning(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"Missing permissions to set wormhole slow mode in channels {channels}. (TIP: Check if 'manage channel' is granted.)",
+            )
+            if itx:
+                await itx.response.send_message(
+                    _(
+                        itx,
+                        "I do not have proper permissions to set slow mode. Some channel may need manual intervention.",
+                    ),
+                    ephemeral=True,
+                )
+            return False
+        return True
+
+    # LISTENERS
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Main message relay logics."""
@@ -126,6 +167,8 @@ class Wormhole(commands.Cog):
                         target_channel,
                         "Missing permissions to send the message.",
                     )
+
+    # COMMANDS
 
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole_channel.command(
@@ -169,45 +212,6 @@ class Wormhole(commands.Cog):
             f"Channel '{channel.name}' was added as wormhole channel.",
         )
         return
-
-    async def _set_slowmode(self, itx: discord.Interaction, delay: int):
-        """Helper function to set slowmode on Wormhole channels.
-
-        If False is returned, the ITX interaction was already handled.
-        If True is returned, the ITX interaction must be handled by the
-        following code.
-
-        :param itx: Discord interaction
-        :param delay: Slowmode delay to set
-        :return: True if no exception was raised, False otherwise
-        """
-        ret = []
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
-            if target_channel:
-                try:
-                    await target_channel.edit(slowmode_delay=delay)
-                except discord.Forbidden:
-                    ch = f"#{target_channel.name} ({target_channel.id}) {target_channel.guild.name}"
-                    ret.append(ch)
-
-        if ret:
-            channels = ",".join(ret)
-            await bot_log.warning(
-                itx.user if itx else None,
-                itx.channel if itx else None,
-                f"Missing permissions to set wormhole slow mode in channels {channels}. (TIP: Check if 'manage channel' is granted.)",
-            )
-            if itx:
-                await itx.response.send_message(
-                    _(
-                        itx,
-                        "I do not have proper permissions to set slow mode. Some channel may need manual intervention.",
-                    ),
-                    ephemeral=True,
-                )
-            return False
-        return True
 
     # requires manage_channels permission
     @check.acl2(check.ACLevel.BOT_OWNER)

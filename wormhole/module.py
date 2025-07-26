@@ -95,7 +95,7 @@ class Wormhole(commands.Cog):
         :param delay: Slowmode delay to set
         :param itx: Discord interaction
         """
-        ret = []
+        forbidden_channels = []
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
@@ -103,10 +103,10 @@ class Wormhole(commands.Cog):
                     await target_channel.edit(slowmode_delay=delay)
                 except discord.Forbidden:
                     ch = f"#{target_channel.name} ({target_channel.id}) {target_channel.guild.name}"
-                    ret.append(ch)
+                    forbidden_channels.append(ch)
 
-        if ret:
-            channels = ",".join(ret)
+        if forbidden_channels:
+            channels = ",".join(forbidden_channels)
             await bot_log.warning(
                 itx.user if itx else None,
                 itx.channel if itx else None,

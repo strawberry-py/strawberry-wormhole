@@ -67,7 +67,7 @@ class Wormhole(commands.Cog):
 
     # HELPER FUNCTIONS
 
-    async def _message_formatter(self, message: discord.Message):
+    async def _message_formatter(self, message: discord.Message) -> str:
         """Helper function to format wormhole message.
 
         :param message: Discord message to format

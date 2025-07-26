@@ -1,6 +1,4 @@
-import os
 import re
-
 from typing import Optional
 
 import discord
@@ -18,9 +16,6 @@ from .database import (  # Local database model for managing wormhole channels
 _ = i18n.Translator("modules/wormhole").translate
 bot_log = logger.Bot.logger()
 guild_log = logger.Guild.logger()
-
-# ID of the guild (server) that hosts custom emojis
-emoji_guild_id = int(os.getenv("EMOJI_GUILD"))
 
 
 class Wormhole(commands.Cog):

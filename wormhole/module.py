@@ -218,25 +218,6 @@ class Wormhole(commands.Cog):
         )
         return
 
-    # requires manage_channels permission
-    @check.acl2(check.ACLevel.BOT_OWNER)
-    @wormhole_slowmode.command(
-        name="set",
-        description="Apply slowmode to all wormhole channels.",
-    )
-    @app_commands.describe(delay="Time in seconds")
-    async def set_wormhole_slowmode(self, itx: discord.Interaction, delay: int):
-        """Apply slowmode to all wormhole channels."""
-        if delay < 0:
-            await itx.response.send_message(
-                _(itx, "Delay should be 0 or more.").format(time=delay),
-                ephemeral=True,
-            )
-            return
-
-        storage.set(self, 0, key="wormhole_slowmode", value=delay)
-        await self._set_slowmode(delay, itx)
-
     @check.acl2(check.ACLevel.GUILD_OWNER)
     @wormhole_channel.command(
         name="remove",
@@ -275,6 +256,25 @@ class Wormhole(commands.Cog):
             f"Channel '{channel.name}' was removed as wormhole channel.",
         )
         return
+
+    # requires manage_channels permission
+    @check.acl2(check.ACLevel.BOT_OWNER)
+    @wormhole_slowmode.command(
+        name="set",
+        description="Apply slowmode to all wormhole channels.",
+    )
+    @app_commands.describe(delay="Time in seconds")
+    async def set_wormhole_slowmode(self, itx: discord.Interaction, delay: int):
+        """Apply slowmode to all wormhole channels."""
+        if delay < 0:
+            await itx.response.send_message(
+                _(itx, "Delay should be 0 or more.").format(time=delay),
+                ephemeral=True,
+            )
+            return
+
+        storage.set(self, 0, key="wormhole_slowmode", value=delay)
+        await self._set_slowmode(delay, itx)
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_slowmode.command(

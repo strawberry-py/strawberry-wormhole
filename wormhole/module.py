@@ -11,9 +11,6 @@ import unidecode
 
 from .database import WormholeChannel
 
-from .database import WormholeChannel
-
-
 _ = i18n.Translator("modules/wormhole").translate
 bot_log = logger.Bot.logger()
 guild_log = logger.Guild.logger()
@@ -50,7 +47,7 @@ class Wormhole(commands.Cog):
         self.wormhole_channels = WormholeChannel.get_channel_ids()
         self.restore_slowmode.start()
 
-    # ─── TASK INITIALIZATION ──────────────────────────────────────────────────
+    # TASK INITIALIZATION
     @tasks.loop(seconds=2.0, count=1)
     async def restore_slowmode(self):
         """Restore slowmode in wormhole channels after bot starts."""
@@ -62,7 +59,7 @@ class Wormhole(commands.Cog):
         """Wait for bot readiness before restoring slowmode."""
         await self.bot.wait_until_ready()
 
-    # ─── HELPERS ──────────────────────────────────────────────────────────────
+    # HELPERS
     async def _message_formatter(self, message: discord.Message) -> tuple[str, Optional[str]]:
         """
         Format the message and determine a thumbnail.
@@ -138,7 +135,7 @@ class Wormhole(commands.Cog):
                     ephemeral=True,
                 )
 
-    # ─── LISTENER ─────────────────────────────────────────────────────────────
+    # LISTENER
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Relay text and images to configured wormhole channels."""
@@ -182,8 +179,8 @@ class Wormhole(commands.Cog):
                     message.author, ch, f"Relay failed: {e}"
                 )
 
-    # ─── COMMANDS ────────────────────────────────────────────────────────────
-
+    #  COMMANDS 
+    
     # — Wormhole Channel Management —
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(

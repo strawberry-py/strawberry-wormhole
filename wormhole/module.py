@@ -1,4 +1,3 @@
-import re
 import unicodedata
 from typing import Optional
 
@@ -88,10 +87,9 @@ class Wormhole(commands.Cog):
                 break
         guild_display = str(emoji) if emoji else f"[{guild.name}]"
 
-        # Sanitize user mentions to prevent abuse across servers
-        new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
-
-        formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
+        formatted_message = (
+            f"**{guild_display} {message.author.name}:** {message.content}"
+        )
         return formatted_message
 
     async def _set_slowmode(

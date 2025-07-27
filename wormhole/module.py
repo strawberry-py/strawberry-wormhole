@@ -1,4 +1,6 @@
 import re
+import io
+import unidecode
 from typing import Optional
 
 import discord
@@ -11,6 +13,7 @@ from pie.bot import Strawberry
 from .database import (  # Local database model for managing wormhole channels
     WormholeChannel,
 )
+
 
 # Setup for internationalization (i18n) and logging
 _ = i18n.Translator("modules/wormhole").translate
@@ -57,33 +60,39 @@ class Wormhole(commands.Cog):
 
     @restore_slowmode.before_loop
     async def before_restore_slowmode(self):
-        """Ensures that bot is ready before restoring slowmode"""
+        """Ensures that bot is ready before restoring slowmode."""
         await self.bot.wait_until_ready()
 
-    # HELPER FUNCTIONS
+    # ─── HELPERS ──────────────────────────────────────────────────────────────
 
-    async def _message_formatter(self, message: discord.Message) -> str:
-        """Helper function to format wormhole message.
-
-        :param message: Discord message to format
-        :return: Formatted message text
+    async def _message_formatter(self, message: discord.Message) -> tuple[str, Optional[str]]:
+        """
+        Returns a tuple of (formatted_text, thumbnail_url).
+        thumbnail_url will be the server icon if no matching emoji found.
         """
         guild = message.guild
         guild_name = guild.name if guild else "Unknown Server"
 
-        emojis = await self.bot.fetch_application_emojis()
+        # Normalize with Unidecode so accents, emojis, etc. don't break matching
+        norm = unidecode.unidecode(guild_name).lower().replace(" ", "_")
+
+        # Try your custom emoji first
         emoji = None
-        for e in emojis:
-            if e.name == guild_name.replace(" ", "_").lower():
+        for e in await self.bot.fetch_application_emojis():
+            if e.name == norm:
                 emoji = e
                 break
+
+        # If no custom emoji, fall back to guild icon URL (if any)
+        thumbnail = None
+        if not emoji and guild and guild.icon:
+            thumbnail = guild.icon.url
+
         guild_display = str(emoji) if emoji else f"[{guild_name}]"
-
-        # Sanitize user mentions to prevent abuse across servers
         new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)
+        formatted = f"**{guild_display} {message.author.name}:** {new_content}"
 
-        formatted_message = f"**{guild_display} {message.author.name}:** {new_content}"
-        return formatted_message
+        return formatted, thumbnail
 
     async def _set_slowmode(
         self, delay: int, itx: Optional[discord.Interaction] = None
@@ -91,13 +100,10 @@ class Wormhole(commands.Cog):
         """Helper function to set slowmode on Wormhole channels.
 
         If ITX is provided, it also handles the interaction response.
-
-        :param delay: Slowmode delay to set
-        :param itx: Discord interaction
         """
         forbidden_channels = []
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
+        for channel_id in self.wormhole_channels:
+            target_channel = self.bot.get_channel(channel_id)
             if target_channel:
                 try:
                     await target_channel.edit(slowmode_delay=delay)
@@ -106,7 +112,7 @@ class Wormhole(commands.Cog):
                     forbidden_channels.append(ch)
 
         if forbidden_channels:
-            channels = ",".join(forbidden_channels)
+            channels = ", ".join(forbidden_channels)
             await bot_log.warning(
                 itx.user if itx else None,
                 itx.channel if itx else None,
@@ -132,48 +138,62 @@ class Wormhole(commands.Cog):
                     ephemeral=True,
                 )
 
-    # LISTENERS
+    # ─── LISTENER ─────────────────────────────────────────────────────────────
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        """Main message relay logics."""
-        # Ignore bot messages
-        if message.author.bot:
-            return
-
-        # Ignore commands
-        if message.content.startswith(self.bot.command_prefix):
+        """Main message relay logic."""
+        # Ignore bots & commands
+        if message.author.bot or message.content.startswith(self.bot.command_prefix):
             return
 
         # Only proceed if this channel is registered as a wormhole
         if message.channel.id not in self.wormhole_channels:
             return
 
+        # Delete original if possible
         try:
-            await message.delete()  # Delete original user message
+            await message.delete()
         except discord.Forbidden:
             await bot_log.warning(
-                message.author,
-                message.channel,
-                "Missing permissions to delete message.",
+                message.author, message.channel, "Missing permissions to delete message."
             )
 
-        formatted_message = await self._message_formatter(message)  # Format message
+        # Format text and get optional thumbnail URL
+        formatted, thumbnail = await self._message_formatter(message)
 
-        # Send to all wormhole channels
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
-            if target_channel:
+        # Gather image attachments
+        files: list[discord.File] = []
+        for att in message.attachments:
+            if att.content_type and att.content_type.startswith("image/"):
+                data = await att.read()
+                fp = io.BytesIO(data)
+                files.append(discord.File(fp, filename=att.filename))
+
+        # Send to each wormhole channel
+        for cid in self.wormhole_channels:
+            chan = self.bot.get_channel(cid)
+            if not chan:
+                continue
+
+            if thumbnail:
+                embed = discord.Embed(description=formatted)
+                embed.set_thumbnail(url=thumbnail)
                 try:
-                    await target_channel.send(formatted_message)
+                    await chan.send(embed=embed, files=files)
                 except discord.Forbidden:
                     await bot_log.warning(
-                        message.author,
-                        target_channel,
-                        "Missing permissions to send the message.",
+                        message.author, chan, "Missing permissions to send embed."
+                    )
+            else:
+                try:
+                    await chan.send(formatted, files=files)
+                except discord.Forbidden:
+                    await bot_log.warning(
+                        message.author, chan, "Missing permissions to send message."
                     )
 
-    # COMMANDS
+    # ─── COMMANDS ────────────────────────────────────────────────────────────
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(
@@ -183,10 +203,7 @@ class Wormhole(commands.Cog):
     async def set_wormhole_channel(
         self, itx: discord.Interaction, channel: discord.TextChannel
     ):
-        """
-        Register a channel as a wormhole. All messages in this channel
-        will be deleted and mirrored to all other wormhole channels.
-        """
+        """Register a channel as a wormhole."""
         if WormholeChannel.check_existence(channel.id):
             await itx.response.send_message(
                 _(itx, "Channel is already set as wormhole channel."), ephemeral=True
@@ -216,7 +233,6 @@ class Wormhole(commands.Cog):
             itx.channel,
             f"Channel '{channel.name}' was added as wormhole channel.",
         )
-        return
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(
@@ -239,7 +255,7 @@ class Wormhole(commands.Cog):
             await bot_log.warning(
                 itx.user,
                 itx.channel,
-                "Missing permissions to set ongoing slow mode. (TIP: Check if 'manage channel' is granted.)",
+                "Missing permissions to reset slow mode. (TIP: Check if 'manage channel' is granted.)",
             )
 
         WormholeChannel.remove(guild_id=itx.guild.id, channel_id=channel.id)
@@ -255,9 +271,7 @@ class Wormhole(commands.Cog):
             itx.channel,
             f"Channel '{channel.name}' was removed as wormhole channel.",
         )
-        return
 
-    # requires manage_channels permission
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_slowmode.command(
         name="set",
@@ -281,12 +295,11 @@ class Wormhole(commands.Cog):
         name="remove",
         description="Disable slowmode in all wormhole channels.",
     )
-    async def remove_wormhole_slowmode(self, itx: commands.Context):
+    async def remove_wormhole_slowmode(self, itx: discord.Interaction):
         """Disable slowmode in all wormhole channels."""
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)
 
 
-# Register the Cog with the bot
 async def setup(bot: Strawberry) -> None:
     await bot.add_cog(Wormhole(bot))

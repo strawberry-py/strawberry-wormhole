@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from typing import Optional
 
 import discord
@@ -62,6 +63,10 @@ class Wormhole(commands.Cog):
 
     # HELPER FUNCTIONS
 
+    def _remove_accents(self, input_str):
+        nfkd_form = unicodedata.normalize("NFKD", input_str)
+        return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
     async def _message_formatter(self, message: discord.Message) -> str:
         """Helper function to format wormhole message.
 
@@ -69,15 +74,19 @@ class Wormhole(commands.Cog):
         :return: Formatted message text
         """
         guild = message.guild
-        guild_name = guild.name if guild else "Unknown Server"
+        guild_name = (
+            self._remove_accents(guild.name).replace(" ", "_").lower()
+            if guild
+            else "Unknown Server"
+        )
 
         emojis = await self.bot.fetch_application_emojis()
         emoji = None
         for e in emojis:
-            if e.name == guild_name.replace(" ", "_").lower():
+            if e.name == guild_name:
                 emoji = e
                 break
-        guild_display = str(emoji) if emoji else f"[{guild_name}]"
+        guild_display = str(emoji) if emoji else f"[{guild.name}]"
 
         # Sanitize user mentions to prevent abuse across servers
         new_content = re.sub(r"<@(\d+)>", r"`[TAGS ARE NOT ALLOWED!]`", message.content)

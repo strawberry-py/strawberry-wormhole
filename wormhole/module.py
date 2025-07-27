@@ -174,7 +174,10 @@ class Wormhole(commands.Cog):
             target_channel = self.bot.get_channel(channel)
             if target_channel:
                 try:
-                    await target_channel.send(formatted_message)
+                    await target_channel.send(
+                        formatted_message,
+                        allowed_mentions=discord.AllowedMentions.none(),
+                    )
                 except discord.Forbidden:
                     await bot_log.warning(
                         message.author,

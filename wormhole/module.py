@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from pie import check, i18n, logger, storage
+from pie import check, i18n, logger, storage, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
@@ -225,6 +225,67 @@ class Wormhole(commands.Cog):
             itx.user,
             itx.channel,
             f"Channel '{channel.name}' was added as wormhole channel.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.SUBMOD)
+    @wormhole_channel.command(
+        name="list",
+        description="List all channels registered as wormholes.",
+    )
+    async def list_wormhole_channel(self, itx: discord.Interaction):
+        """
+        List all channels registered as wormholes.
+        """
+
+        class Item:
+            def __init__(self, bot: Strawberry, channel):
+                self.guild = channel["guild"]
+                self.channel = channel["channel"]
+                self.slowmode = channel["slowmode"]
+
+        channels = []
+        for channel in self.wormhole_channels:
+            target_channel = self.bot.get_channel(channel)
+            if target_channel:
+                channels.append(
+                    {
+                        "guild": target_channel.guild.name,
+                        "channel": target_channel.name,
+                        "slowmode": target_channel.slowmode_delay,
+                    }
+                )
+            else:
+                channels.append(
+                    {
+                        "guild": str(
+                            WormholeChannel.get_guild_id_by_channel_id(channel)
+                        ),
+                        "channel": str(channel),
+                        "slowmode": None,
+                    }
+                )
+
+        channels = sorted(channels, key=lambda ch: ch["guild"])[::-1]
+        items = [Item(self.bot, channel) for channel in channels]
+
+        table: list[str] = utils.text.create_table(
+            items,
+            header={
+                "guild": _(itx, "Guild"),
+                "channel": _(itx, "Channel"),
+                "slowmode": _(itx, "Slow mode (s)"),
+            },
+        )
+
+        await itx.response.send_message(content="```" + table[0] + "```")
+        for page in table[1:]:
+            await itx.followup.send("```" + page + "```")
+
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            "User used list command.",
         )
         return
 

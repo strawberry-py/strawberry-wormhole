@@ -10,6 +10,15 @@ msgstr Kanál je už nastavený ako wormhole kanál.
 msgid Channel `{channel_name}` was added as wormhole channel.
 msgstr Kanál `{channel_name}` bol pridaný ako wormhole kanál.
 
+msgid Guild
+msgstr Guild
+
+msgid Channel
+msgstr Kanál
+
+msgid Slow mode (s)
+msgstr Pomalý režim (s)
+
 msgid Channel is not set as wormhole channel.
 msgstr Kanál nie je nastavený ako wormhole kanál.
 

@@ -72,6 +72,15 @@ class WormholeChannel(database.base):
         results = session.query(cls.channel_id).all()
         return [r[0] for r in results]
 
+    @classmethod
+    def get_guild_id_by_channel_id(cls, channel_id: int) -> int | None:
+        """
+        Returns the guild_id corresponding to the given channel_id.
+        If not found, returns None.
+        """
+        result = session.query(cls.guild_id).filter_by(channel_id=channel_id).first()
+        return result[0] if result else None
+
     def save(self):
         """
         Commits any changes made to the current instance to the database.

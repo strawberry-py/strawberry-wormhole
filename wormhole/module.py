@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from typing import Optional
 
@@ -78,6 +79,7 @@ class Wormhole(commands.Cog):
             if guild
             else "Unknown Server"
         )
+        guild_name = re.sub(r"[^a-z0-9_]", "", guild_name)
 
         emojis = await self.bot.fetch_application_emojis()
         emoji = None

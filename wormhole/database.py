@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import BigInteger, Column, Integer
+from sqlalchemy import BigInteger, Column, Integer, String, Text
 
 from pie.database import database, session
 
@@ -104,3 +104,49 @@ class WormholeChannel(database.base):
             "guild_id": self.guild_id,
             "channel_id": self.channel_id,
         }
+
+
+class WormholePatterns(database.base):
+    __tablename__ = "wormhole_wormhole_wormholepatterns"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    regex_pattern = Column(String(255), nullable=False)
+    replacement = Column(Text, nullable=False)
+
+    @classmethod
+    def set_pattern(cls, regex_pattern: str, replacement: str):
+        """
+        Adds a new pattern or updates it if it already exists.
+        """
+        pattern = session.query(cls).filter_by(regex_pattern=regex_pattern).first()
+        if pattern:
+            pattern.replacement = replacement
+        else:
+            pattern = cls(regex_pattern=regex_pattern, replacement=replacement)
+            session.add(pattern)
+        session.commit()
+        return pattern
+
+    @classmethod
+    def remove_pattern(cls, regex_pattern: str) -> bool:
+        """
+        Removes a pattern from the database.
+        Returns True if removed, False if not found.
+        """
+        pattern = session.query(cls).filter_by(regex_pattern=regex_pattern).first()
+        if pattern:
+            session.delete(pattern)
+            session.commit()
+            return True
+        return False
+
+    @classmethod
+    def get_patterns_dict(cls) -> dict:
+        """
+        Fetches all WormholePatterns entries and returns a dict:
+        { regex_pattern: replacement }
+        """
+        return {row.regex_pattern: row.replacement for row in session.query(cls).all()}
+
+    def __repr__(self):
+        return f"<WormholePatterns(id={self.id}, regex_pattern='{self.regex_pattern}', replacement='{self.replacement}')>"

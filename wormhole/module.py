@@ -12,6 +12,7 @@ from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
     WormholeChannel,
+    WormholePatterns,
 )
 
 # Setup for internationalization (i18n) and logging
@@ -26,7 +27,7 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
-    patterns = {r"<@(\d+)>": "`[TAGS ARE NOT ALLOWED!]`"}
+    patterns = {}
 
     wormhole: app_commands.Group = app_commands.Group(
         name="wormhole",
@@ -50,6 +51,7 @@ class Wormhole(commands.Cog):
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
+        self.patterns = WormholePatterns.get_patterns_dict()
         self.restore_slowmode.start()
 
     @tasks.loop(seconds=2.0, count=1)

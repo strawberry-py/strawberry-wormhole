@@ -172,16 +172,27 @@ class Wormhole(commands.Cog):
         formatted_message_parts = [formatted_message]
 
         # split message to chunks of roughly 1900 chars
-        while len(formatted_message_parts[len(formatted_message_parts)-1]) > 1900:
+        while len(formatted_message_parts[len(formatted_message_parts) - 1]) > 1900:
             # determine where to split the message
-            tmp = formatted_message_parts[len(formatted_message_parts)-1].find(" ", 1900)
-            if tmp > 1990 or tmp <=0:
-                tmp = formatted_message_parts[len(formatted_message_parts)-1].rfind(" ",1000,1910)
-            if tmp > 1990 or tmp <=0:
+            tmp = formatted_message_parts[len(formatted_message_parts) - 1].find(
+                " ", 1900
+            )
+            if tmp > 1990 or tmp <= 0:
+                tmp = formatted_message_parts[len(formatted_message_parts) - 1].rfind(
+                    " ", 1000, 1910
+                )
+            if tmp > 1990 or tmp <= 0:
                 tmp = 1900
 
-            formatted_message_parts.append("***Continuation*** " + formatted_message_parts[len(formatted_message_parts)-1][tmp:]) # mark remaining text as continuation
-            formatted_message_parts[(len(formatted_message_parts)-2)] = formatted_message_parts[len(formatted_message_parts)-2][:tmp] # update previous part to be roughly 1900 chars long
+            formatted_message_parts.append(
+                "***Continuation*** "
+                + formatted_message_parts[len(formatted_message_parts) - 1][tmp:]
+            )  # mark remaining text as continuation
+            formatted_message_parts[
+                (len(formatted_message_parts) - 2)
+            ] = formatted_message_parts[len(formatted_message_parts) - 2][
+                :tmp
+            ]  # update previous part to be roughly 1900 chars long
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:

@@ -26,6 +26,7 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
+    patterns = {r"<@(\d+)>": "`[TAGS ARE NOT ALLOWED!]`"}
 
     wormhole: app_commands.Group = app_commands.Group(
         name="wormhole",
@@ -100,7 +101,11 @@ class Wormhole(commands.Cog):
             "\n" if any(message.content.startswith(m) for m in marks) else ""
         )
 
-        formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+        new_content = message.content
+        for key in self.patterns.keys():
+            new_content = re.sub(key, self.patterns[key], new_content)
+            
+        formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
         # add stickers from servers to message
         for s in stickers or []:

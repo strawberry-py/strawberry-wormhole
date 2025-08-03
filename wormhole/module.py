@@ -48,6 +48,12 @@ class Wormhole(commands.Cog):
         parent=wormhole,
     )
 
+    wormhole_pattern: app_commands.Group = app_commands.Group(
+        name="pattern",
+        description="Set of configuration for wormhole message moderation with regex patterns.",
+        parent=wormhole,
+    )
+
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
@@ -428,6 +434,111 @@ class Wormhole(commands.Cog):
         """Disable slowmode in all wormhole channels."""
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)
+
+    @check.acl2(check.ACLevel.MOD)
+    @wormhole_pattern.command(
+        name="set",
+        description="Set regex filtration pattern.",
+    )
+    @app_commands.describe(pattern="Regex pattern to be replaced.")
+    @app_commands.describe(replacement="Replacement of the found pattern.")
+    async def wormhole_pattern_set(
+        self, itx: discord.Interaction, pattern: str, replacement: str
+    ):
+        """
+        Adds regex filtration pattern to the database and patterns array.
+        """
+        WormholePatterns.set_pattern(pattern, replacement)
+        self.patterns[pattern] = replacement
+
+        await itx.response.send_message(
+            _(
+                itx,
+                "Pattern `{pattern}: {replacement}` was added to the list of patterns.",
+            ).format(pattern=pattern, replacement=replacement),
+            ephemeral=True,
+        )
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            f"Pattern '{pattern}: {replacement}' was added to the list of patterns.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.MOD)
+    @wormhole_pattern.command(
+        name="list",
+        description="Lists regex filtration patterns.",
+    )
+    async def wormhole_pattern_list(self, itx: discord.Interaction):
+        """
+        Lists all regex filtration patterns in a table.
+        """
+
+        class Item:
+            def __init__(self, key, value):
+                self.pattern = key
+                self.replacement = value
+
+        patterns = dict(sorted(self.patterns.items()))
+        items = [Item(key, value) for key, value in patterns.items()]
+
+        table: list[str] = utils.text.create_table(
+            items,
+            header={
+                "pattern": _(itx, "Pattern"),
+                "replacement": _(itx, "Replacement"),
+            },
+        )
+
+        await itx.response.send_message(content="```" + table[0] + "```")
+        for page in table[1:]:
+            await itx.followup.send("```" + page + "```")
+
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            "User used list patterns command.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.MOD)
+    @wormhole_pattern.command(
+        name="remove",
+        description="Remove regex filtration pattern.",
+    )
+    @app_commands.describe(pattern="Regex pattern to be replaced.")
+    async def wormhole_pattern_remove(self, itx: discord.Interaction, pattern: str):
+        """
+        Removes regex filtration pattern from the database and patterns array.
+        """
+        if WormholePatterns.remove_pattern(pattern):
+            self.patterns.pop(pattern)
+
+            await itx.response.send_message(
+                _(
+                    itx, "Pattern `{pattern}` was removed from the list of patterns."
+                ).format(pattern=pattern),
+                ephemeral=True,
+            )
+            await guild_log.info(
+                itx.user,
+                itx.channel,
+                f"Pattern '{pattern}' was added to the list of patterns.",
+            )
+        else:
+            await itx.response.send_message(
+                _(
+                    itx, "Pattern `{pattern}` was not found in the list of patterns."
+                ).format(pattern=pattern),
+                ephemeral=True,
+            )
+            await guild_log.info(
+                itx.user,
+                itx.channel,
+                f"Pattern '{pattern}' was not found in the list of patterns therefore it could not be removed.",
+            )
+        return
 
 
 # Register the Cog with the bot

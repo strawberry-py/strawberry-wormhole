@@ -42,3 +42,18 @@ msgstr Kanál `{channel_name}` byl odstraněn jako wormhole kanál.
 
 msgid Delay should be 0 or more.
 msgstr Zpoždění musí být 0 nebo více.
+
+msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
+msgstr Vzor `{pattern}: {replacement}` byl přidán do seznamu vzorů.
+
+msgid Pattern
+msgstr Vzor
+
+msgid Replacement
+msgstr Náhrada
+
+msgid Pattern `{pattern}` was removed from the list of patterns.
+msgstr Vzor `{pattern}` byl odstraněn ze seznamu vzorů.
+
+msgid Pattern `{pattern}` was not found in the list of patterns.
+msgstr Vzor `{pattern}` nebyl nalezen v seznamu vzorů.

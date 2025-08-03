@@ -94,11 +94,12 @@ class Wormhole(commands.Cog):
         )
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
-            formatted_message = f"> {message.reference.cached_message.content.replace("\n", "\n> ") if message.reference.cached_message else "Unknown"}\n{formatted_message}"
+            msg = message.reference.cached_message.content.replace("\n", "\n> ")
+            formatted_message = f"> {msg if message.reference.cached_message else 'Unknown'}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward
         ):
-            formatted_message = f"**{guild_display} {message.author.name}:** Forwarded\n```{message.reference.cached_message.content if message.reference.cached_message else "Unknown forwarded message"}```"
+            formatted_message = f"**{guild_display} {message.author.name}:** Forwarded\n```{message.reference.cached_message.content if message.reference.cached_message else 'Unknown forwarded message'}```"
         return formatted_message
 
     async def _set_slowmode(

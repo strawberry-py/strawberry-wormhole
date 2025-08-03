@@ -476,16 +476,18 @@ class Wormhole(commands.Cog):
         """
 
         class Item:
-            def __init__(self, key, value):
-                self.pattern = key
-                self.replacement = value
+            def __init__(self, pattern):
+                self.idx = pattern.idx
+                self.pattern = pattern.regex_pattern
+                self.replacement = pattern.replacement
 
-        patterns = dict(sorted(self.patterns.items()))
-        items = [Item(key, value) for key, value in patterns.items()]
+        patts = WormholePatterns.get_patterns()
+        items = [Item(pattern) for pattern in patts]
 
         table: list[str] = utils.text.create_table(
             items,
             header={
+                "idx": _(itx, "ID"),
                 "pattern": _(itx, "Pattern"),
                 "replacement": _(itx, "Replacement"),
             },
@@ -507,13 +509,14 @@ class Wormhole(commands.Cog):
         name="remove",
         description="Remove regex filtration pattern.",
     )
-    @app_commands.describe(pattern="Regex pattern to be replaced.")
-    async def wormhole_pattern_remove(self, itx: discord.Interaction, pattern: str):
+    @app_commands.describe(id="Regex pattern id.")
+    async def wormhole_pattern_remove(self, itx: discord.Interaction, id: int):
         """
         Removes regex filtration pattern from the database and patterns array.
         """
-        if WormholePatterns.remove_pattern(pattern):
-            self.patterns.pop(pattern)
+        pattern = WormholePatterns.remove_pattern(id)
+        if pattern:
+            self.patterns.pop(pattern.regex_pattern)
 
             await itx.response.send_message(
                 _(

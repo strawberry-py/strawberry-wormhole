@@ -46,6 +46,9 @@ msgstr Oneskorenie musí byť 0 alebo viac.
 msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
 msgstr Vzor `{pattern}: {replacement}` bol pridaný do zoznamu vzorov.
 
+msgid ID
+msgstr ID
+
 msgid Pattern
 msgstr Vzor
 

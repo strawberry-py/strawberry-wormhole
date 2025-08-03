@@ -46,6 +46,9 @@ msgstr Zpoždění musí být 0 nebo více.
 msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
 msgstr Vzor `{pattern}: {replacement}` byl přidán do seznamu vzorů.
 
+msgid ID
+msgstr ID
+
 msgid Pattern
 msgstr Vzor
 

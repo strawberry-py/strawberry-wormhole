@@ -109,7 +109,7 @@ class WormholeChannel(database.base):
 class WormholePatterns(database.base):
     __tablename__ = "wormhole_wormhole_wormholepatterns"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    idx = Column(Integer, primary_key=True, autoincrement=True)
     regex_pattern = Column(String(255), nullable=False)
     replacement = Column(Text, nullable=False)
 
@@ -128,17 +128,17 @@ class WormholePatterns(database.base):
         return pattern
 
     @classmethod
-    def remove_pattern(cls, regex_pattern: str) -> bool:
+    def remove_pattern(cls, idx: int) -> bool:
         """
         Removes a pattern from the database.
         Returns True if removed, False if not found.
         """
-        pattern = session.query(cls).filter_by(regex_pattern=regex_pattern).first()
+        pattern = session.query(cls).filter_by(idx=idx).first()
         if pattern:
             session.delete(pattern)
             session.commit()
-            return True
-        return False
+            return pattern
+        return None
 
     @classmethod
     def get_patterns_dict(cls) -> dict:
@@ -148,5 +148,15 @@ class WormholePatterns(database.base):
         """
         return {row.regex_pattern: row.replacement for row in session.query(cls).all()}
 
+    @classmethod
+    def get_patterns(cls):
+        """
+        Retrieve all wormhole patterns from the database.
+
+        :param session: SQLAlchemy session object
+        :return: List of WormholePatterns objects
+        """
+        return session.query(cls).all()
+
     def __repr__(self):
-        return f"<WormholePatterns(id={self.id}, regex_pattern='{self.regex_pattern}', replacement='{self.replacement}')>"
+        return f"<WormholePatterns(id={self.idx}, regex_pattern='{self.regex_pattern}', replacement='{self.replacement}')>"

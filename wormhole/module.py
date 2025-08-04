@@ -94,8 +94,13 @@ class Wormhole(commands.Cog):
         )
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
-            msg = message.reference.cached_message.content.replace("\n", "\n> ")
-            formatted_message = f"> {msg if message.reference.cached_message else 'Unknown'}\n{formatted_message}"
+            msg = (
+                message.reference.cached_message.content.replace("\n", "\n> ")
+                if message.reference.cached_message
+                and message.reference.cached_message.content
+                else "Unknown reference message"
+            )
+            formatted_message = f"> {msg}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward
         ):

@@ -95,7 +95,7 @@ class Wormhole(commands.Cog):
             "\n" if any(message.content.find(m, 0, 10) >= 0 for m in marks) else ""
         )
 
-        formatted_message = f"**{guild_display} {message.author.name}:** { marks_to_add_to_start + message.content}\n"
+        formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg = (

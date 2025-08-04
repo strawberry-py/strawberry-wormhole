@@ -43,8 +43,17 @@ msgstr Kanál `{channel_name}` bol odstránený ako wormhole kanál.
 msgid Delay should be 0 or more.
 msgstr Oneskorenie musí byť 0 alebo viac.
 
+msgid Pattern already exists. No was pattern created.
+msgstr Vzor už existuje. Nebol vytvorený žiadny vzor.
+
 msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
 msgstr Vzor `{pattern}: {replacement}` bol pridaný do zoznamu vzorov.
+
+msgid Pattern with id `{idx}` was not found.
+msgstr Vzor s ID `{idx}` nebol nájdený.
+
+msgid Pattern id {idx} was updated.
+msgstr Vzor s ID {idx} bol aktualizovaný.
 
 msgid ID
 msgstr ID

@@ -112,7 +112,7 @@ class Wormhole(commands.Cog):
         new_content = message.content
         for key in self.patterns.keys():
             new_content = re.sub(key, self.patterns[key], new_content)
-            
+
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
         # add stickers from servers to message
@@ -448,7 +448,21 @@ class Wormhole(commands.Cog):
         """
         Adds regex filtration pattern to the database and patterns array.
         """
-        WormholePatterns.set_pattern(pattern, replacement)
+        try:
+            WormholePatterns.set_pattern(pattern, replacement)
+        except ValueError:
+            await itx.response.send_message(
+                _(
+                    itx,
+                    "Pattern already exists. No was pattern created.",
+                ).format(pattern=pattern, replacement=replacement),
+                ephemeral=True,
+            )
+            await guild_log.info(
+                itx.user,
+                itx.channel,
+                f"Pattern '{pattern}: {replacement}' already exists. No was pattern created.",
+            )
         self.patterns[pattern] = replacement
 
         await itx.response.send_message(
@@ -462,6 +476,50 @@ class Wormhole(commands.Cog):
             itx.user,
             itx.channel,
             f"Pattern '{pattern}: {replacement}' was added to the list of patterns.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.MOD)
+    @wormhole_pattern.command(
+        name="update",
+        description="Update regex filtration pattern.",
+    )
+    @app_commands.describe(idx="Id of the pattern.")
+    @app_commands.describe(pattern="Regex pattern to be replaced.")
+    @app_commands.describe(replacement="Replacement of the found pattern.")
+    async def wormhole_pattern_update(
+        self, itx: discord.Interaction, idx: int, pattern: str, replacement: str
+    ):
+        """
+        ...
+        """
+        try:
+            WormholePatterns.update_pattern(idx, pattern, replacement)
+        except ValueError:
+            await itx.response.send_message(
+                _(
+                    itx,
+                    "Pattern with id `{idx}` was not found.",
+                ).format(idx=idx),
+                ephemeral=True,
+            )
+            await guild_log.warning(
+                itx.user,
+                itx.channel,
+                f"Pattern with id {idx} could not be edited. There is no pattern with this id.",
+            )
+        self.patterns[pattern] = replacement
+        await itx.response.send_message(
+            _(
+                itx,
+                "Pattern id {idx} was updated.",
+            ).format(idx=idx),
+            ephemeral=True,
+        )
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            f"Pattern with id {idx} was updated. Pattern: {pattern} Replacement: {replacement}",
         )
         return
 

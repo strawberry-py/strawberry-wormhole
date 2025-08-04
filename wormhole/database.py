@@ -116,14 +116,30 @@ class WormholePatterns(database.base):
     @classmethod
     def set_pattern(cls, regex_pattern: str, replacement: str):
         """
-        Adds a new pattern or updates it if it already exists.
+        Adds a new pattern only if it does not already exist.
         """
-        pattern = session.query(cls).filter_by(regex_pattern=regex_pattern).first()
-        if pattern:
-            pattern.replacement = replacement
-        else:
-            pattern = cls(regex_pattern=regex_pattern, replacement=replacement)
-            session.add(pattern)
+        existing_pattern = (
+            session.query(cls).filter_by(regex_pattern=regex_pattern).first()
+        )
+        if existing_pattern:
+            raise ValueError(f"Pattern with regex '{regex_pattern}' already exists.")
+        new_pattern = cls(regex_pattern=regex_pattern, replacement=replacement)
+        session.add(new_pattern)
+        session.commit()
+        return new_pattern
+
+    @classmethod
+    def update_pattern(cls, idx: int, regex_pattern: str, replacement: str):
+        """
+        Updates an existing pattern based on idx.
+        """
+        pattern = session.query(cls).filter_by(idx=idx).first()
+        if not pattern:
+            raise ValueError(f"No pattern found with idx {idx}.")
+
+        pattern.regex_pattern = regex_pattern
+        pattern.replacement = replacement
+
         session.commit()
         return pattern
 

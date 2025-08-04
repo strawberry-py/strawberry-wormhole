@@ -73,7 +73,7 @@ class Wormhole(commands.Cog):
         :param message: Discord message to format
         :return: Formatted message text
         """
-        gtx = i18n.TranslationContext(message.guild, message.author.id)
+        gtx = i18n.TranslationContext(message.guild.id, message.author.id)
         guild = message.guild
         guild_name = (
             self._remove_accents(guild.name).replace(" ", "_").lower()
@@ -185,7 +185,7 @@ class Wormhole(commands.Cog):
                 "Missing permissions to delete message.",
             )
 
-        gtx = i18n.TranslationContext(message.guild, message.author.id)
+        gtx = i18n.TranslationContext(message.guild.id, message.author.id)
         formatted_message_parts = utils.text.smart_split(
             await self._message_formatter(message),
             mark_continuation=_(gtx, "***Continuation***") + "\n",

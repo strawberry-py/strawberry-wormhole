@@ -89,9 +89,30 @@ class Wormhole(commands.Cog):
                 break
         guild_display = str(emoji) if emoji else f"[{guild.name}]"
 
+        marks = ["### ", "## ", "-# ", "# "]  # , ">>> ", "> "
+
+        message_content = message.content
+        for mark in marks:
+            message_content = message_content.removeprefix(mark)
+
+        if message_content.find("> ", 0, 5):
+            message_content.replace("> ", "\n> ", 1).replace(">>\n> ", ">>> ")
+        if message_content.find(">>> ", 0, 5):
+            message_content.replace(">>> ", "\n>>> ", 1)
+
         formatted_message = (
-            f"**{guild_display} {message.author.name}:** {message.content}"
+            f"**{guild_display} {message.author.name}:** {message_content}\n"
         )
+
+        marks_to_add_to_start = ""
+        # check if text is supposed to be bigger, smaller or citation
+        for mark in marks:
+            tmp = message.content.split("\n")[0]
+            if tmp.startswith(mark):
+                marks_to_add_to_start = mark + marks_to_add_to_start
+
+        formatted_message = marks_to_add_to_start + formatted_message
+
         return formatted_message
 
     async def _set_slowmode(
@@ -167,32 +188,9 @@ class Wormhole(commands.Cog):
                 "Missing permissions to delete message.",
             )
 
-        formatted_message = await self._message_formatter(message)  # Format message
-
-        formatted_message_parts = [formatted_message]
-
-        # split message to chunks of roughly 1900 chars
-        while len(formatted_message_parts[len(formatted_message_parts) - 1]) > 1900:
-            # determine where to split the message
-            tmp = formatted_message_parts[len(formatted_message_parts) - 1].find(
-                " ", 1900
-            )
-            if tmp > 1990 or tmp <= 0:
-                tmp = formatted_message_parts[len(formatted_message_parts) - 1].rfind(
-                    " ", 1000, 1910
-                )
-            if tmp > 1990 or tmp <= 0:
-                tmp = 1900
-
-            formatted_message_parts.append(
-                "***Continuation*** "
-                + formatted_message_parts[len(formatted_message_parts) - 1][tmp:]
-            )  # mark remaining text as continuation
-            formatted_message_parts[
-                (len(formatted_message_parts) - 2)
-            ] = formatted_message_parts[len(formatted_message_parts) - 2][
-                :tmp
-            ]  # update previous part to be roughly 1900 chars long
+        formatted_message_parts = utils.text.smart_split(
+            await self._message_formatter(message), mark_continuation=True
+        )  # Format message
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:

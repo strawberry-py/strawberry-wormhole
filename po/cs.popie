@@ -1,8 +1,23 @@
+msgid Unknown Server
+msgstr Neznámý server
+
+msgid Unknown reference message
+msgstr Odpověď na neznámou zprávu
+
+msgid Forwarded
+msgstr Přeposlal
+
+msgid Unknown forwarded message
+msgstr Neznámá přeposlaná zpráva
+
 msgid I do not have proper permissions to set slow mode. Some channel may need manual intervention.
 msgstr Nemám dostatečná oprávnění k nastavení zpomaleného režimu. Některé kanály mohou vyžadovat ruční zásah.
 
 msgid Slow mode set to {delay} seconds.
 msgstr Pomalý mód nastaven na {delay} sekund.
+
+msgid ***Continuation***
+msgstr ***Pokračování***
 
 msgid Channel is already set as wormhole channel.
 msgstr Kanál je již nastaven jako wormhole kanál.

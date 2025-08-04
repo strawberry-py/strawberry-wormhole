@@ -73,11 +73,12 @@ class Wormhole(commands.Cog):
         :param message: Discord message to format
         :return: Formatted message text
         """
+        gtx = i18n.TranslationContext(message.guild, message.author.id)
         guild = message.guild
         guild_name = (
             self._remove_accents(guild.name).replace(" ", "_").lower()
             if guild
-            else "Unknown Server"
+            else _(gtx, "Unknown Server")
         )
         guild_name = re.sub(r"[^a-z0-9_]", "", guild_name)
 
@@ -102,13 +103,13 @@ class Wormhole(commands.Cog):
                 message.reference.cached_message.content.replace("\n", "\n> ")
                 if message.reference.cached_message
                 and message.reference.cached_message.content
-                else "Unknown reference message"
+                else _(gtx, "Unknown reference message")
             )
             formatted_message = f"> {msg}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward
         ):
-            formatted_message = f"**{guild_display} {message.author.name}:** Forwarded\n```{message.reference.cached_message.content if message.reference.cached_message else 'Unknown forwarded message'}```"
+            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n```{message.reference.cached_message.content if message.reference.cached_message else _(gtx, 'Unknown forwarded message')}```"
         return formatted_message
 
     async def _set_slowmode(
@@ -184,9 +185,10 @@ class Wormhole(commands.Cog):
                 "Missing permissions to delete message.",
             )
 
+        gtx = i18n.TranslationContext(message.guild, message.author.id)
         formatted_message_parts = utils.text.smart_split(
             await self._message_formatter(message),
-            mark_continuation="***Pokračování***\n",
+            mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
 
         # Send to all wormhole channels

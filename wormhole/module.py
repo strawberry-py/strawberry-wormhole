@@ -73,11 +73,12 @@ class Wormhole(commands.Cog):
         :param message: Discord message to format
         :return: Formatted message text
         """
+        gtx = i18n.TranslationContext(message.guild.id, message.author.id)
         guild = message.guild
         guild_name = (
             self._remove_accents(guild.name).replace(" ", "_").lower()
             if guild
-            else "Unknown Server"
+            else _(gtx, "Unknown Server")
         )
         guild_name = re.sub(r"[^a-z0-9_]", "", guild_name)
 
@@ -89,22 +90,26 @@ class Wormhole(commands.Cog):
                 break
         guild_display = str(emoji) if emoji else f"[{guild.name}]"
 
-        formatted_message = (
-            f"**{guild_display} {message.author.name}:** {message.content}"
+        marks = ["### ", "## ", "-# ", "# ", ">>> ", "> "]
+
+        marks_to_add_to_start = (
+            "\n" if any(message.content.startswith(m) >= 0 for m in marks) else ""
         )
+
+        formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg = (
                 message.reference.cached_message.content.replace("\n", "\n> ")
                 if message.reference.cached_message
                 and message.reference.cached_message.content
-                else "Unknown reference message"
+                else _(gtx, "Unknown reference message")
             )
             formatted_message = f"> {msg}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward
         ):
-            formatted_message = f"**{guild_display} {message.author.name}:** Forwarded\n```{message.reference.cached_message.content if message.reference.cached_message else 'Unknown forwarded message'}```"
+            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n```{message.reference.cached_message.content if message.reference.cached_message else _(gtx, 'Unknown forwarded message')}```"
         return formatted_message
 
     async def _set_slowmode(
@@ -180,17 +185,22 @@ class Wormhole(commands.Cog):
                 "Missing permissions to delete message.",
             )
 
-        formatted_message = await self._message_formatter(message)  # Format message
+        gtx = i18n.TranslationContext(message.guild.id, message.author.id)
+        formatted_message_parts = utils.text.smart_split(
+            await self._message_formatter(message),
+            mark_continuation=_(gtx, "***Continuation***") + "\n",
+        )  # Format message
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
             if target_channel:
                 try:
-                    await target_channel.send(
-                        formatted_message,
-                        allowed_mentions=discord.AllowedMentions.none(),
-                    )
+                    for message_part in formatted_message_parts:
+                        await target_channel.send(
+                            message_part,
+                            allowed_mentions=discord.AllowedMentions.none(),
+                        )
                 except discord.Forbidden:
                     await bot_log.warning(
                         message.author,

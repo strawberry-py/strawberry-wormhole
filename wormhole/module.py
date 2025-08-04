@@ -92,7 +92,7 @@ class Wormhole(commands.Cog):
         marks = ["### ", "## ", "-# ", "# ", ">>> ", "> "]
 
         marks_to_add_to_start = (
-            "\n" if any(message.content.find(m, 0, 10) >= 0 for m in marks) else ""
+            "\n" if any(message.content.startswith(m) >= 0 for m in marks) else ""
         )
 
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"

@@ -89,29 +89,28 @@ class Wormhole(commands.Cog):
                 break
         guild_display = str(emoji) if emoji else f"[{guild.name}]"
 
-        marks = ["### ", "## ", "-# ", "# "]  # , ">>> ", "> "
+        marks = ["### ", "## ", "-# ", "# ", ">>> ", "> "]
 
         message_content = message.content
         for mark in marks:
             message_content = message_content.removeprefix(mark)
-
-        if message_content.find("> ", 0, 5):
-            message_content.replace("> ", "\n> ", 1).replace(">>\n> ", ">>> ")
-        if message_content.find(">>> ", 0, 5):
-            message_content.replace(">>> ", "\n>>> ", 1)
-
-        formatted_message = (
-            f"**{guild_display} {message.author.name}:** {message_content}\n"
-        )
 
         marks_to_add_to_start = ""
         # check if text is supposed to be bigger, smaller or citation
         for mark in marks:
             tmp = message.content.split("\n")[0]
             if tmp.startswith(mark):
+                if tmp.startswith(
+                    mark + ">>> "
+                ):  # bigger or smaller text can also be citation
+                    mark += ">>> "
+                if tmp.startswith(
+                    mark + "> "
+                ):  # bigger or smaller text can also be citation
+                    mark += "> "
                 marks_to_add_to_start = mark + marks_to_add_to_start
 
-        formatted_message = marks_to_add_to_start + formatted_message
+        formatted_message = f"**{guild_display} {message.author.name}:** \n{marks_to_add_to_start + message_content}\n"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg = (
@@ -201,7 +200,8 @@ class Wormhole(commands.Cog):
             )
 
         formatted_message_parts = utils.text.smart_split(
-            await self._message_formatter(message), mark_continuation=True
+            await self._message_formatter(message),
+            mark_continuation="***Pokračování***\n",
         )  # Format message
 
         # Send to all wormhole channels

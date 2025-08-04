@@ -91,26 +91,11 @@ class Wormhole(commands.Cog):
 
         marks = ["### ", "## ", "-# ", "# ", ">>> ", "> "]
 
-        message_content = message.content
-        for mark in marks:
-            message_content = message_content.removeprefix(mark)
+        marks_to_add_to_start = (
+            "\n" if any(message.content.find(m, 0, 10) >= 0 for m in marks) else ""
+        )
 
-        marks_to_add_to_start = ""
-        # check if text is supposed to be bigger, smaller or citation
-        for mark in marks:
-            tmp = message.content.split("\n")[0]
-            if tmp.startswith(mark):
-                if tmp.startswith(
-                    mark + ">>> "
-                ):  # bigger or smaller text can also be citation
-                    mark += ">>> "
-                if tmp.startswith(
-                    mark + "> "
-                ):  # bigger or smaller text can also be citation
-                    mark += "> "
-                marks_to_add_to_start = mark + marks_to_add_to_start
-
-        formatted_message = f"**{guild_display} {message.author.name}:** \n{marks_to_add_to_start + message_content}\n"
+        formatted_message = f"**{guild_display} {message.author.name}:** { marks_to_add_to_start + message.content}\n"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg = (

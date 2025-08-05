@@ -109,7 +109,7 @@ class Wormhole(commands.Cog):
             for m in msg_tmp.strip().split("\n"):
                 if not m.startswith("> >"):
                     msg += m + "\n"
-            formatted_message = f"> {msg}\n{formatted_message}"
+            formatted_message = f"> {msg.rstrip()}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward
         ):
@@ -194,6 +194,8 @@ class Wormhole(commands.Cog):
             await self._message_formatter(message),
             mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
+        print("\noutput\n")
+        print(formatted_message_parts)
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:

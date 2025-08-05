@@ -194,8 +194,6 @@ class Wormhole(commands.Cog):
             await self._message_formatter(message),
             mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
-        print("\noutput\n")
-        print(formatted_message_parts)
 
         # Send to all wormhole channels
         for channel in self.wormhole_channels:

@@ -1,3 +1,4 @@
+import io
 import re
 import unicodedata
 from typing import Optional
@@ -98,9 +99,13 @@ class Wormhole(commands.Cog):
 
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
+        if message.stickers:
+            for s in message.stickers:
+                formatted_message = formatted_message.rstrip() + f"[.]({s.url})"
+
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg_tmp = (
-                message.reference.cached_message.content.replace("\n", "\n> ")
+                "> " + message.reference.cached_message.content.replace("\n", "\n> ")
                 if message.reference.cached_message
                 and message.reference.cached_message.content
                 else _(gtx, "Unknown reference message")
@@ -180,6 +185,14 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
+        attachments_list: list = []
+
+        if message.attachments:
+            for a in message.attachments:
+                tmp: io.BytesIO = io.BytesIO()
+                await a.save(tmp)
+                attachments_list.append([tmp, a.filename, a.is_spoiler()])
+
         try:
             await message.delete()  # Delete original user message
         except discord.Forbidden:
@@ -195,6 +208,12 @@ class Wormhole(commands.Cog):
             mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
 
+        files_list = []
+        for attachment in attachments_list:
+            files_list.append(
+                discord.File(attachment[0], attachment[1], spoiler=attachment[2])
+            )
+
         # Send to all wormhole channels
         for channel in self.wormhole_channels:
             target_channel = self.bot.get_channel(channel)
@@ -203,8 +222,11 @@ class Wormhole(commands.Cog):
                     for message_part in formatted_message_parts:
                         await target_channel.send(
                             message_part,
+                            files=files_list,
                             allowed_mentions=discord.AllowedMentions.none(),
                         )
+                    for attachment in attachments_list:
+                        attachment[0].seek(0)
                 except discord.Forbidden:
                     await bot_log.warning(
                         message.author,

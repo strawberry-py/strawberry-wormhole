@@ -93,18 +93,22 @@ class Wormhole(commands.Cog):
         marks = ["### ", "## ", "-# ", "# ", ">>> ", "> "]
 
         marks_to_add_to_start = (
-            "\n" if any(message.content.startswith(m) >= 0 for m in marks) else ""
+            "\n" if any(message.content.startswith(m) for m in marks) else ""
         )
 
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
-            msg = (
+            msg_tmp = (
                 message.reference.cached_message.content.replace("\n", "\n> ")
                 if message.reference.cached_message
                 and message.reference.cached_message.content
                 else _(gtx, "Unknown reference message")
             )
+            msg = ""
+            for m in msg_tmp.strip().split("\n"):
+                if not m.startswith("> >"):
+                    msg += m + "\n"
             formatted_message = f"> {msg}\n{formatted_message}"
         elif (
             message.reference and message.reference.type == MessageReferenceType.forward

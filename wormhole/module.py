@@ -106,7 +106,7 @@ class Wormhole(commands.Cog):
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg_tmp = (
-                message.reference.cached_message.content.replace("\n", "\n> ")
+                "> " + message.reference.cached_message.content.replace("\n", "\n> ")
                 if message.reference.cached_message
                 and message.reference.cached_message.content
                 else _(gtx, "Unknown reference message")

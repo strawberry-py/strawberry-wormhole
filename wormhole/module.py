@@ -1,4 +1,3 @@
-import copy
 import io
 import re
 import unicodedata
@@ -223,9 +222,11 @@ class Wormhole(commands.Cog):
                     for message_part in formatted_message_parts:
                         await target_channel.send(
                             message_part,
-                            files=copy.deepcopy(files_list),
+                            files=files_list,
                             allowed_mentions=discord.AllowedMentions.none(),
                         )
+                    for attachment in attachments_list:
+                        attachment[0].seek(0)
                 except discord.Forbidden:
                     await bot_log.warning(
                         message.author,

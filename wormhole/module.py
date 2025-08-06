@@ -103,9 +103,8 @@ class Wormhole(commands.Cog):
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         # add stickers from servers to message
-        if stickers is not None:
-            for s in stickers:
-                formatted_message = formatted_message.rstrip() + f"[.]({s})"
+        for s in stickers or []:
+            formatted_message = formatted_message.rstrip() + f"[.]({s})"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg_tmp = (
@@ -202,12 +201,11 @@ class Wormhole(commands.Cog):
         discord_stickers: list = []
         if message.stickers:
             for s in message.stickers:
-                try:
-                    tmp: io.BytesIO = io.BytesIO()
-                    await s.save(tmp)
+                sticker = await s.fetch()
+                if type(sticker) is discord.sticker.StandardSticker:
+                    discord_stickers.append(sticker)
+                elif type(sticker) is discord.sticker.GuildSticker:
                     saved_stickers.append(s.url)  # save custom stickers
-                except TypeError:
-                    discord_stickers.append(s)  # save discord default stickers
 
         try:
             await message.delete()  # Delete original user message

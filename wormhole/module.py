@@ -199,13 +199,12 @@ class Wormhole(commands.Cog):
         # discord default stickers cant be resent by url
         saved_stickers: list = []
         discord_stickers: list = []
-        if message.stickers:
-            for s in message.stickers:
-                sticker = await s.fetch()
-                if type(sticker) is discord.sticker.StandardSticker:
-                    discord_stickers.append(sticker)
-                elif type(sticker) is discord.sticker.GuildSticker:
-                    saved_stickers.append(s.url)  # save custom stickers
+        for s in message.stickers or []:
+            sticker = await s.fetch()
+            if type(sticker) is discord.sticker.StandardSticker:
+                discord_stickers.append(sticker)
+            elif type(sticker) is discord.sticker.GuildSticker:
+                saved_stickers.append(s.url)  # save custom stickers
 
         try:
             await message.delete()  # Delete original user message

@@ -201,9 +201,9 @@ class Wormhole(commands.Cog):
         discord_stickers: list = []
         for s in message.stickers or []:
             sticker = await s.fetch()
-            if type(sticker) is discord.sticker.StandardSticker:
+            if isinstance(sticker, discord.sticker.StandardSticker):
                 discord_stickers.append(sticker)
-            elif type(sticker) is discord.sticker.GuildSticker:
+            elif isinstance(sticker, discord.sticker.GuildSticker):
                 saved_stickers.append(s.url)  # save custom stickers
 
         try:

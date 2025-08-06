@@ -68,10 +68,13 @@ class Wormhole(commands.Cog):
         nfkd_form = unicodedata.normalize("NFKD", input_str)
         return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-    async def _message_formatter(self, message: discord.Message) -> str:
+    async def _message_formatter(
+        self, message: discord.Message, stickers: list = None
+    ) -> str:
         """Helper function to format wormhole message.
 
         :param message: Discord message to format
+        :param stickers: list of custom sticker urls
         :return: Formatted message text
         """
         gtx = i18n.TranslationContext(message.guild.id, message.author.id)
@@ -99,9 +102,10 @@ class Wormhole(commands.Cog):
 
         formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
-        if message.stickers:
-            for s in message.stickers:
-                formatted_message = formatted_message.rstrip() + f"[.]({s.url})"
+        # add stickers from servers to message
+        if stickers is not None:
+            for s in stickers:
+                formatted_message = formatted_message.rstrip() + f"[.]({s})"
 
         if message.reference and message.reference.type == MessageReferenceType.reply:
             msg_tmp = (
@@ -193,6 +197,18 @@ class Wormhole(commands.Cog):
                 await a.save(tmp)
                 attachments_list.append([tmp, a.filename, a.is_spoiler()])
 
+        # discord default stickers cant be resent by url
+        saved_stickers: list = []
+        discord_stickers: list = []
+        if message.stickers:
+            for s in message.stickers:
+                try:
+                    tmp: io.BytesIO = io.BytesIO()
+                    await s.save(tmp)
+                    saved_stickers.append(s.url)  # save custom stickers
+                except TypeError:
+                    discord_stickers.append(s)  # save discord default stickers
+
         try:
             await message.delete()  # Delete original user message
         except discord.Forbidden:
@@ -204,7 +220,7 @@ class Wormhole(commands.Cog):
 
         gtx = i18n.TranslationContext(message.guild.id, message.author.id)
         formatted_message_parts = utils.text.smart_split(
-            await self._message_formatter(message),
+            await self._message_formatter(message, saved_stickers),
             mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
 
@@ -223,6 +239,7 @@ class Wormhole(commands.Cog):
                         await target_channel.send(
                             message_part,
                             files=files_list,
+                            stickers=discord_stickers,
                             allowed_mentions=discord.AllowedMentions.none(),
                         )
                     for attachment in attachments_list:

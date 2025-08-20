@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import BigInteger, Column, Integer
+from sqlalchemy import BigInteger, Column, Integer, String
 
 from pie.database import database, session
 
@@ -104,3 +104,74 @@ class WormholeChannel(database.base):
             "guild_id": self.guild_id,
             "channel_id": self.channel_id,
         }
+
+class BanTimout:
+  __tablename__ = "wormhole_wormhole_bantimeout"
+  
+  idx = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(String(255))
+  time = Column(Integer)
+
+  @classmethod
+  def add(cls, name, time = None):
+    """
+    ...
+    """
+    query = cls(name=name, time=time)
+    session.add(query)
+    session.commit()
+    return query
+    
+  @classmethod
+  def delete(self):
+    session.delete(self)
+    session.commit()
+    
+  @classmethod
+  def get(cls):
+    """
+    ...
+    """
+    query = (
+      session.query(cls)
+      .all()
+    )
+    return query
+  
+  #ban_list = {name: time;} 
+  #if name in ban_list.keys():
+  #  if not ban_list[name]:
+  #    return
+  #  else:
+  #    # Time check logic
+  #  return
+
+  @classmethod
+  def get_dict(self):
+    """
+    ...
+    """
+    ban_list = {}
+    results = session.query(cls).all()
+    for r in results:
+      ban_list.update({r[1]: r[2]})
+    return ban_list
+  
+  def __repr__(self) -> str:
+    """
+    ...
+    """
+    return (
+      f'<{self.__class__.__name__} idx="{self.idx}" '
+      f'name="{self.name}" time="{self.name}" '
+    )
+  
+  def dump(self) -> dict:
+    """
+    ...
+    """
+    return {
+      "name": self.name,
+      "time": self.time,
+    }
+    

@@ -124,6 +124,9 @@ class BanTimout:
     
   @classmethod
   def delete(self):
+    """
+    ...
+    """
     session.delete(self)
     session.commit()
     

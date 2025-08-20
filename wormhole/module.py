@@ -11,7 +11,7 @@ from pie import check, i18n, logger, storage, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
-    WormholeChannel,
+    WormholeChannel, BanTimeout,
 )
 
 # Setup for internationalization (i18n) and logging
@@ -26,6 +26,7 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
+    ban_list: dict = {} #{name: time;} 
 
     wormhole: app_commands.Group = app_commands.Group(
         name="wormhole",
@@ -49,6 +50,7 @@ class Wormhole(commands.Cog):
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
+        self.banlist = BanTimeout.get_dict()
         self.restore_slowmode.start()
 
     @tasks.loop(seconds=2.0, count=1)
@@ -188,6 +190,14 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
+        # Check ban list 
+        if name in ban_list.keys():
+          if not ban_list[name]:
+            return
+          else:
+            # Time check logic
+            return
+        
         attachments_list: list = []
 
         if message.attachments:

@@ -198,18 +198,22 @@ class Wormhole(commands.Cog):
             return
 
         # Check ban list 
-        if name in ban_list.keys():
-            if not ban_list[name]:
+        if message.author.name in self.ban_list.keys():
+            if not self.ban_list[message.author.name]:
                 return
-            if datetime.datetime.utcnow() > ban_list[name]:
-                BanTimeout.get(user.name).delete()
-                del ban_list[user.name]
+            if datetime.datetime.utcnow() > self.ban_list[message.author.name]:
+                banned_users = BanTimeout.get(message.author.name)
+                banned_user = banned_users[0] if banned_users else None
+                banned_user.delete()
+                del self.ban_list[message.author.name]
 
                 await bot_log.info(
                     None,
                     None,
-                    f"Ban of user {user.name} has expired.",
-                )        
+                    f"Ban of user {message.author.name} has expired.",
+                )
+            else:
+                return
         
         attachments_list: list = []
 
@@ -455,12 +459,12 @@ class Wormhole(commands.Cog):
         name="set",
         description="...",
     )
-    @app_commands.describe(delay="Time in seconds")
-    async def ban_user(self, itx: discord.Interaction, user: discord.User, time: int = None):
+    @app_commands.describe(time="Time in seconds")
+    async def wormhole_ban_user(self, itx: discord.Interaction, user: discord.User, time: int = None):
         """
         ...
         """
-        if User.name in ban_list.keys():
+        if user.name in self.ban_list.keys():
             await itx.response.send_message(_(itx, "This user is already banned."), ephemeral=True)
             return
 
@@ -469,12 +473,13 @@ class Wormhole(commands.Cog):
         else:
             ban_end = None
         
-        BanTimeout.add(User.name, ban_end)
-        ban_list.update({User.name: ban_end})
+        #WormholeChannel.add(guild_id=itx.guild.id, channel_id=channel.id)
+        BanTimeout.add(name = user.name, time = ban_end)
+        self.ban_list.update({user.name: ban_end})
         if time:
-            await itx.response.send_message(_(itx, "User {username} was blocked or {seconds} seconds.").format(username=User.name, seconds=time), ephemeral=True)
+            await itx.response.send_message(_(itx, "User {username} was blocked or {seconds} seconds.").format(username=user.name, seconds=time), ephemeral=True)
         else:
-            await itx.response.send_message(_(itx, "User {username} was blocked.").format(username=User.name), ephemeral=True)
+            await itx.response.send_message(_(itx, "User {username} was blocked.").format(username=user.name), ephemeral=True)
 
 
     @check.acl2(check.ACLevel.SUBMOD)
@@ -482,7 +487,7 @@ class Wormhole(commands.Cog):
         name="list",
         description="...",
     )
-    async def list_banned(self, itx: discord.Interaction):
+    async def wormhole_list_banned(self, itx: discord.Interaction):
         """
         ...
         """
@@ -492,7 +497,7 @@ class Wormhole(commands.Cog):
                 self.name = pattern.name
                 self.time = pattern.time
 
-        bantimout = BanTimeout.get()
+        bantimout = BanTimeout.get_all()
         items = [Item(bt) for bt in bantimout]
 
         table: list[str] = utils.text.create_table(
@@ -520,14 +525,16 @@ class Wormhole(commands.Cog):
         name="remove",
         description="...",
     )
-    async def unbun_user(self, itx: discord.Interaction, user: discord.User):
+    async def wormhole_unbun_user(self, itx: discord.Interaction, user: discord.User):
         """
         ...
         """
-        BanTimeout.get(user.name).delete()
-        del ban_list[user.name]
+        banned_users = BanTimeout.get(user.name)
+        banned_user = banned_users[0] if banned_users else None
+        banned_user.delete()
+        del self.ban_list[user.name]
 
-        await itx.response.send_message(_(itx, "User {username} was unblocked.").format(username=User.name), ephemeral=True)
+        await itx.response.send_message(_(itx, "User {username} was unblocked.").format(username=user.name), ephemeral=True)
         await bot_log.info(
                 itx.user if itx else None,
                 itx.channel if itx else None,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import BigInteger, Column, Integer, String
+from sqlalchemy import BigInteger, Column, Integer, String, DateTime
 
 from pie.database import database, session
 
@@ -105,15 +105,29 @@ class WormholeChannel(database.base):
             "channel_id": self.channel_id,
         }
 
-class BanTimeout:
+class BanTimeout(database.base):
   __tablename__ = "wormhole_wormhole_bantimeout"
+
+  #id = Column(Integer, primary_key=True, autoincrement=True)
+  #  guild_id = Column(BigInteger)
+  #  channel_id = Column(BigInteger)
   
   idx = Column(Integer, primary_key=True, autoincrement=True)
-  name = Column(String(255))
-  time = Column(Integer)
+  name = Column(String(255), nullable=False)
+  time = Column(DateTime)
+
+  #@classmethod
+  #  def add(cls, guild_id: int, channel_id: int) -> WormholeChannel:
+  #      """
+  #      Adds a new WormholeChannel entry to the database.
+  #      """
+  #      query = cls(guild_id=guild_id, channel_id=channel_id)
+  #      session.add(query)
+  #      session.commit()
+  #      return query
 
   @classmethod
-  def add(cls, name, time = None):
+  def add(cls, name: str, time = None):
     """
     ...
     """
@@ -122,7 +136,6 @@ class BanTimeout:
     session.commit()
     return query
     
-  @classmethod
   def delete(self):
     """
     ...
@@ -131,23 +144,23 @@ class BanTimeout:
     session.commit()
     
   @classmethod
-  def get(cls, user: str = None):
+  def get(cls, user: str):
     """
     ...
     """
-    query = session.query(cls, name = user).all()
-    return query
+    query = session.query(cls).filter_by(name = user)
+    return query.all()
 
-  #@classmethod
-  #def get_all(cls):
-  #  """
-  #  ...
-  #  """
-  #  query = (
-  #    session.query(cls)
-  #    .all()
-  #  )
-  #  return query
+  @classmethod
+  def get_all(cls):
+    """
+    ...
+    """
+    query = (
+      session.query(cls)
+      .all()
+    )
+    return query
   
   #ban_list = {name: time;} 
   #if name in ban_list.keys():
@@ -158,14 +171,14 @@ class BanTimeout:
   #  return
 
   @classmethod
-  def get_dict(self):
+  def get_dict(cls):
     """
     ...
     """
     ban_list = {}
     results = session.query(cls).all()
     for r in results:
-      ban_list.update({r[1]: r[2]})
+      ban_list.update({r.name: r.time})
     return ban_list
   
   def __repr__(self) -> str:

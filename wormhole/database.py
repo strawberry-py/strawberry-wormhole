@@ -105,7 +105,7 @@ class WormholeChannel(database.base):
             "channel_id": self.channel_id,
         }
 
-class BanTimout:
+class BanTimeout:
   __tablename__ = "wormhole_wormhole_bantimeout"
   
   idx = Column(Integer, primary_key=True, autoincrement=True)
@@ -131,15 +131,23 @@ class BanTimout:
     session.commit()
     
   @classmethod
-  def get(cls):
+  def get(cls, user: str = None):
     """
     ...
     """
-    query = (
-      session.query(cls)
-      .all()
-    )
+    query = session.query(cls, name = user).all()
     return query
+
+  #@classmethod
+  #def get_all(cls):
+  #  """
+  #  ...
+  #  """
+  #  query = (
+  #    session.query(cls)
+  #    .all()
+  #  )
+  #  return query
   
   #ban_list = {name: time;} 
   #if name in ban_list.keys():
@@ -177,4 +185,5 @@ class BanTimout:
       "name": self.name,
       "time": self.time,
     }
+
     

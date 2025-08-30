@@ -1,5 +1,6 @@
 import io
 import re
+import datetime
 import unicodedata
 from typing import Optional
 
@@ -47,10 +48,16 @@ class Wormhole(commands.Cog):
         parent=wormhole,
     )
 
+    wormhole_ban: app_commands.Group = app_commands.Group(
+        name="ban",
+        description="Set of configuration for wormhole ban.",
+        parent=wormhole,
+    )
+
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
-        self.banlist = BanTimeout.get_dict()
+        self.ban_list = BanTimeout.get_dict()
         self.restore_slowmode.start()
 
     @tasks.loop(seconds=2.0, count=1)
@@ -431,6 +438,98 @@ class Wormhole(commands.Cog):
         """Disable slowmode in all wormhole channels."""
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)
+
+
+
+
+
+
+    @check.acl2(check.ACLevel.BOT_OWNER)
+    @wormhole_ban.command(
+        name="set",
+        description="...",
+    )
+    @app_commands.describe(delay="Time in seconds")
+    async def ban_user(self, itx: discord.Interaction, user: discord.User, time: int = None):
+        """
+        ...
+        """
+        if User.name in ban_list.keys():
+            await itx.response.send_message(_(itx, "This user is already banned."), ephemeral=True)
+            return
+
+        if time:
+            ban_end = datetime.datetime.utcnow() + datetime.timedelta(seconds = time)
+        else:
+            ban_end = None
+        
+        BanTimeout.add(User.name, ban_end)
+        ban_list.update({User.name: ban_end})
+        if time:
+            await itx.response.send_message(_(itx, "User {username} was blocked or {seconds} seconds.").format(username=User.name, seconds=time), ephemeral=True)
+        else:
+            await itx.response.send_message(_(itx, "User {username} was blocked.").format(username=User.name), ephemeral=True)
+
+
+    @check.acl2(check.ACLevel.SUBMOD)
+    @wormhole_ban.command(
+        name="list",
+        description="...",
+    )
+    async def list_banned(self, itx: discord.Interaction):
+        """
+        ...
+        """
+        class Item:
+            def __init__(self, pattern):
+                self.idx = pattern.idx
+                self.name = pattern.name
+                self.time = pattern.time
+
+        bantimout = BanTimeout.get()
+        items = [Item(bt) for bt in bantimout]
+
+        table: list[str] = utils.text.create_table(
+            items,
+            header={
+                "idx": _(itx, "ID"),
+                "name": _(itx, "Name"),
+                "time": _(itx, "Time"),
+            },
+        )
+
+        await itx.response.send_message(content="```" + table[0] + "```")
+        for page in table[1:]:
+            await itx.followup.send("```" + page + "```")
+
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            "User used list ban and timeout command.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.BOT_OWNER)
+    @wormhole_ban.command(
+        name="remove",
+        description="...",
+    )
+    async def unbun_user(self, itx: discord.Interaction, user: discord.User):
+        """
+        ...
+        """
+        BanTimeout.get(user.name).delete()
+        del ban_list[user.name]
+
+        await itx.response.send_message(_(itx, "User {username} was unblocked.").format(username=User.name), ephemeral=True)
+        await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"User {user.name} was unblocked from accessing wormhole.",
+            )        
+        return
+
+    
 
 
 # Register the Cog with the bot

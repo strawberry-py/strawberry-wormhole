@@ -1,6 +1,6 @@
+import datetime
 import io
 import re
-import datetime
 import unicodedata
 from typing import Optional
 
@@ -12,7 +12,8 @@ from pie import check, i18n, logger, storage, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
-    WormholeChannel, BanTimeout,
+    BanTimeout,
+    WormholeChannel,
 )
 
 # Setup for internationalization (i18n) and logging
@@ -27,7 +28,7 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
-    ban_list: dict = {} #{name: time;} 
+    ban_list: dict = {}
 
     wormhole: app_commands.Group = app_commands.Group(
         name="wormhole",
@@ -197,7 +198,7 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
-        # Check ban list 
+        # Check ban list
         if message.author.name in self.ban_list.keys():
             if not self.ban_list[message.author.name]:
                 return
@@ -214,7 +215,7 @@ class Wormhole(commands.Cog):
                 )
             else:
                 return
-        
+
         attachments_list: list = []
 
         if message.attachments:
@@ -449,48 +450,64 @@ class Wormhole(commands.Cog):
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)
 
-
-
-
-
-
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_ban.command(
         name="set",
-        description="...",
+        description="Ban user from sending messages into wormhole.",
     )
     @app_commands.describe(time="Time in seconds")
-    async def wormhole_ban_user(self, itx: discord.Interaction, user: discord.User, time: int = None):
+    async def wormhole_ban_user(
+        self, itx: discord.Interaction, user: discord.User, time: int = None
+    ):
         """
-        ...
+        Ban user from sending messages into wormhole.
         """
         if user.name in self.ban_list.keys():
-            await itx.response.send_message(_(itx, "This user is already banned."), ephemeral=True)
+            await itx.response.send_message(
+                _(itx, "This user is already banned."), ephemeral=True
+            )
             return
 
         if time:
-            ban_end = datetime.datetime.utcnow() + datetime.timedelta(seconds = time)
+            ban_end = datetime.datetime.utcnow() + datetime.timedelta(seconds=time)
         else:
             ban_end = None
-        
-        #WormholeChannel.add(guild_id=itx.guild.id, channel_id=channel.id)
-        BanTimeout.add(name = user.name, time = ban_end)
+
+        BanTimeout.add(name=user.name, time=ban_end)
         self.ban_list.update({user.name: ban_end})
         if time:
-            await itx.response.send_message(_(itx, "User {username} was blocked or {seconds} seconds.").format(username=user.name, seconds=time), ephemeral=True)
+            await itx.response.send_message(
+                _(itx, "User {username} was blocked or {seconds} seconds.").format(
+                    username=user.name, seconds=time
+                ),
+                ephemeral=True,
+            )
+            await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"User {user.name} was banned from wormhole for {time} seconds.",
+            )
         else:
-            await itx.response.send_message(_(itx, "User {username} was blocked.").format(username=user.name), ephemeral=True)
-
+            await itx.response.send_message(
+                _(itx, "User {username} was blocked.").format(username=user.name),
+                ephemeral=True,
+            )
+            await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"User {user.name} was banned from wormhole.",
+            )
 
     @check.acl2(check.ACLevel.SUBMOD)
     @wormhole_ban.command(
         name="list",
-        description="...",
+        description="List banned users.",
     )
     async def wormhole_list_banned(self, itx: discord.Interaction):
         """
-        ...
+        List banned users.
         """
+
         class Item:
             def __init__(self, pattern):
                 self.idx = pattern.idx
@@ -516,33 +533,34 @@ class Wormhole(commands.Cog):
         await guild_log.info(
             itx.user,
             itx.channel,
-            "User used list ban and timeout command.",
+            "User used list wormhole ban and timeout command.",
         )
         return
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_ban.command(
         name="remove",
-        description="...",
+        description="Remove ban for user.",
     )
-    async def wormhole_unbun_user(self, itx: discord.Interaction, user: discord.User):
+    async def wormhole_unban_user(self, itx: discord.Interaction, user: discord.User):
         """
-        ...
+        Remove ban for user.
         """
         banned_users = BanTimeout.get(user.name)
         banned_user = banned_users[0] if banned_users else None
         banned_user.delete()
         del self.ban_list[user.name]
 
-        await itx.response.send_message(_(itx, "User {username} was unblocked.").format(username=user.name), ephemeral=True)
+        await itx.response.send_message(
+            _(itx, "User {username} was unblocked.").format(username=user.name),
+            ephemeral=True,
+        )
         await bot_log.info(
-                itx.user if itx else None,
-                itx.channel if itx else None,
-                f"User {user.name} was unblocked from accessing wormhole.",
-            )        
+            itx.user if itx else None,
+            itx.channel if itx else None,
+            f"User {user.name} was unblocked from accessing wormhole.",
+        )
         return
-
-    
 
 
 # Register the Cog with the bot

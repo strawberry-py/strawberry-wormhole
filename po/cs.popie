@@ -42,3 +42,24 @@ msgstr Kanál `{channel_name}` byl odstraněn jako wormhole kanál.
 
 msgid Delay should be 0 or more.
 msgstr Zpoždění musí být 0 nebo více.
+
+msgid This user is already banned.
+msgstr Tento uživatel je již zablokován.
+
+msgid User {username} was blocked or {seconds} seconds.
+msgstr Uživatel {username} byl zablokován na {seconds} sekund.
+
+msgid User {username} was blocked.
+msgstr Uživatel {username} byl zablokován.
+
+msgid ID
+msgstr ID
+
+msgid Name
+msgstr Jméno
+
+msgid Time
+msgstr Čas
+
+msgid User {username} was unblocked.
+msgstr Uživatel {username} byl odblokován.

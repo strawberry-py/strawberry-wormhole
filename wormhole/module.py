@@ -199,11 +199,17 @@ class Wormhole(commands.Cog):
 
         # Check ban list 
         if name in ban_list.keys():
-          if not ban_list[name]:
-            return
-          else:
-            # Time check logic
-            return
+            if not ban_list[name]:
+                return
+            if datetime.datetime.utcnow() > ban_list[name]:
+                BanTimeout.get(user.name).delete()
+                del ban_list[user.name]
+
+                await bot_log.info(
+                    None,
+                    None,
+                    f"Ban of user {user.name} has expired.",
+                )        
         
         attachments_list: list = []
 

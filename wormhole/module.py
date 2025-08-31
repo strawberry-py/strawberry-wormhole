@@ -49,12 +49,6 @@ class Wormhole(commands.Cog):
         parent=wormhole,
     )
 
-    wormhole_ban: app_commands.Group = app_commands.Group(
-        name="ban",
-        description="Set of configuration for wormhole ban.",
-        parent=wormhole,
-    )
-
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels = WormholeChannel.get_channel_ids()
@@ -451,8 +445,8 @@ class Wormhole(commands.Cog):
         await self._set_slowmode(0, itx)
 
     @check.acl2(check.ACLevel.BOT_OWNER)
-    @wormhole_ban.command(
-        name="set",
+    @wormhole.command(
+        name="ban",
         description="Ban user from sending messages into wormhole.",
     )
     @app_commands.describe(time="Time in seconds")
@@ -499,8 +493,8 @@ class Wormhole(commands.Cog):
             )
 
     @check.acl2(check.ACLevel.SUBMOD)
-    @wormhole_ban.command(
-        name="list",
+    @wormhole.command(
+        name="banlist",
         description="List banned users.",
     )
     async def wormhole_list_banned(self, itx: discord.Interaction):
@@ -538,8 +532,8 @@ class Wormhole(commands.Cog):
         return
 
     @check.acl2(check.ACLevel.BOT_OWNER)
-    @wormhole_ban.command(
-        name="remove",
+    @wormhole.command(
+        name="unban",
         description="Remove ban for user.",
     )
     async def wormhole_unban_user(self, itx: discord.Interaction, user: discord.User):

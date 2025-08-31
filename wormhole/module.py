@@ -572,8 +572,11 @@ class Wormhole(commands.Cog):
         """
         Removes regex filtration pattern from the database and patterns array.
         """
-        pattern = WormholePatterns.remove_pattern(id)
+        patterns = WormholePatterns.get(idx=id)
+        pattern = patterns[0] if patterns else None
+
         if pattern:
+            pattern.delete()
             self.patterns.pop(pattern.regex_pattern)
 
             await itx.response.send_message(

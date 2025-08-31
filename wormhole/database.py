@@ -144,19 +144,6 @@ class WormholePatterns(database.base):
         return pattern
 
     @classmethod
-    def remove_pattern(cls, idx: int) -> bool:
-        """
-        Removes a pattern from the database.
-        Returns True if removed, False if not found.
-        """
-        pattern = session.query(cls).filter_by(idx=idx).first()
-        if pattern:
-            session.delete(pattern)
-            session.commit()
-            return pattern
-        return None
-
-    @classmethod
     def get_patterns_dict(cls) -> dict:
         """
         Fetches all WormholePatterns entries and returns a dict:
@@ -173,6 +160,27 @@ class WormholePatterns(database.base):
         :return: List of WormholePatterns objects
         """
         return session.query(cls).all()
+
+    @classmethod
+    def get(cls, idx: int):
+        """
+        Retrieve all rows matching a given id.
+
+        Args:
+            idx (int): The id to filter by.
+
+        Returns:
+            list: A list of matching objects.
+        """
+        query = session.query(cls).filter_by(idx=idx)
+        return query.all()
+
+    def delete(self):
+        """
+        Delete the current object from the database.
+        """
+        session.delete(self)
+        session.commit()
 
     def __repr__(self):
         return f"<WormholePatterns(id={self.idx}, regex_pattern='{self.regex_pattern}', replacement='{self.replacement}')>"

@@ -139,7 +139,7 @@ class Wormhole(commands.Cog):
                     msg += m + "\n"
             formatted_message = f"> {msg.rstrip()}\n{formatted_message}"
         elif ref and ref.type == MessageReferenceType.forward:
-            guild_ = message.guild
+            guild_ = referenced_msg.guild
             guild_name_ = (
                 self._remove_accents(guild_.name).replace(" ", "_").lower()
                 if guild_
@@ -152,7 +152,13 @@ class Wormhole(commands.Cog):
                     emoji_ = e
                     break
             guild_display_ = str(emoji_) if emoji_ else f"[{guild_.name}]"
-            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} {referenced_msg.author.name}: ``` {referenced_msg.content.replace('```', '') if referenced_msg else _(gtx, 'Unknown forwarded message')}```"
+            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} {(
+                referenced_msg.author.name
+                if referenced_msg.author and referenced_msg.author.name
+                else _(gtx, "Unknow author")
+            )}: ``` {referenced_msg.content.replace('```', '')
+            if referenced_msg and referenced_msg.content
+            else _(gtx, 'Unknown forwarded message')}```"
         return formatted_message
 
     async def _set_slowmode(

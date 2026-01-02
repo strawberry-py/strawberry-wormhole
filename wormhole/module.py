@@ -121,11 +121,17 @@ class Wormhole(commands.Cog):
                         if channel is not None:
                             referenced_msg = await channel.fetch_message(ref.message_id)
                 except discord.errors.NotFound:
-                    pass
+                    bot_log.debug(
+                        f"Could not find referenced message for guild {ref.guild_id} due to NotFound error"
+                    )
                 except discord.errors.Forbidden:
-                    pass
+                    bot_log.debug(
+                        f"Could not find referenced message for guild {ref.guild_id} due to Forbidden error"
+                    )
                 except discord.errors.HTTPException:
-                    pass
+                    bot_log.debug(
+                        f"Could not find referenced message for guild {ref.guild_id} due to HTTPException"
+                    )
 
         if ref and ref.type == MessageReferenceType.reply:
             msg_tmp = (

@@ -106,11 +106,31 @@ class Wormhole(commands.Cog):
         for s in stickers or []:
             formatted_message = formatted_message.rstrip() + f"[.]({s})"
 
-        if message.reference and message.reference.type == MessageReferenceType.reply:
+        referenced_msg = None
+        ref = message.reference
+        if ref is not None:
+            # Try the cached version first
+            if ref.resolved:
+                referenced_msg = ref.resolved
+            else:
+                # Try fetching manually
+                try:
+                    guild = self.bot.get_guild(ref.guild_id)
+                    if guild is not None:
+                        channel = guild.get_channel(ref.channel_id)
+                        if channel is not None:
+                            referenced_msg = await channel.fetch_message(ref.message_id)
+                except discord.errors.NotFound:
+                    pass
+                except discord.errors.Forbidden:
+                    pass
+                except discord.errors.HTTPException:
+                    pass
+
+        if ref and ref.type == MessageReferenceType.reply:
             msg_tmp = (
-                "> " + message.reference.cached_message.content.replace("\n", "\n> ")
-                if message.reference.cached_message
-                and message.reference.cached_message.content
+                "> " + referenced_msg.content.replace("\n", "\n> ")
+                if referenced_msg and referenced_msg.content
                 else _(gtx, "Unknown reference message")
             )
             msg = ""
@@ -118,10 +138,21 @@ class Wormhole(commands.Cog):
                 if not m.startswith("> >"):
                     msg += m + "\n"
             formatted_message = f"> {msg.rstrip()}\n{formatted_message}"
-        elif (
-            message.reference and message.reference.type == MessageReferenceType.forward
-        ):
-            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n```{message.reference.cached_message.content if message.reference.cached_message else _(gtx, 'Unknown forwarded message')}```"
+        elif ref and ref.type == MessageReferenceType.forward:
+            guild_ = message.guild
+            guild_name_ = (
+                self._remove_accents(guild_.name).replace(" ", "_").lower()
+                if guild_
+                else _(gtx, "Unknown Server")
+            )
+            guild_name_ = re.sub(r"[^a-z0-9_]", "", guild_name_)
+            emoji_ = None
+            for e in emojis:
+                if e.name == guild_name_:
+                    emoji_ = e
+                    break
+            guild_display_ = str(emoji_) if emoji_ else f"[{guild_.name}]"
+            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} {referenced_msg.author.name}: ``` {referenced_msg.content.replace('```', '') if referenced_msg else _(gtx, 'Unknown forwarded message')}```"
         return formatted_message
 
     async def _set_slowmode(

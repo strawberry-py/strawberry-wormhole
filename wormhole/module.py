@@ -159,13 +159,13 @@ class Wormhole(commands.Cog):
                     break
             guild_display_ = str(emoji_) if emoji_ else f"[{guild_.name}]"
             formatted_message = (
-                f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} "
+                f"**{guild_display} {message.author.name}** _{_(gtx, 'forwarded message from')} "
                 + (
-                    referenced_msg.author.name
+                    (guild_display_ + " " + referenced_msg.author.name)
                     if referenced_msg.author and referenced_msg.author.name
                     else _(gtx, "Unknow author")
                 )
-                + ": ```"
+                + "_ ```"
                 + (
                     referenced_msg.content.replace("```", "")
                     if referenced_msg and referenced_msg.content

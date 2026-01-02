@@ -158,13 +158,21 @@ class Wormhole(commands.Cog):
                     emoji_ = e
                     break
             guild_display_ = str(emoji_) if emoji_ else f"[{guild_.name}]"
-            formatted_message = f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} {(
-                referenced_msg.author.name
-                if referenced_msg.author and referenced_msg.author.name
-                else _(gtx, "Unknow author")
-            )}: ``` {referenced_msg.content.replace('```', '')
-            if referenced_msg and referenced_msg.content
-            else _(gtx, 'Unknown forwarded message')}```"
+            formatted_message = (
+                f"**{guild_display} {message.author.name}:** {_(gtx, 'Forwarded')}\n>>> {guild_display_} "
+                + (
+                    referenced_msg.author.name
+                    if referenced_msg.author and referenced_msg.author.name
+                    else _(gtx, "Unknow author")
+                )
+                + ": ```"
+                + (
+                    referenced_msg.content.replace("```", "")
+                    if referenced_msg and referenced_msg.content
+                    else _(gtx, "Unknown forwarded message")
+                )
+                + "```"
+            )
         return formatted_message
 
     async def _set_slowmode(

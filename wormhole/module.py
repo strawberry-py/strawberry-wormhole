@@ -69,6 +69,12 @@ class Wormhole(commands.Cog):
         return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
     async def _get_guild_display(self, guild: discord.Guild, gtx):
+        """Helper function for getting guild display name for _message_formatter
+
+        :param guild: discord.Guild to which display will be created
+        :param gtx: discord.Guild translation context
+        :return: string with guild display name
+        """
         guild_name = (
             self._remove_accents(guild.name).replace(" ", "_").lower()
             if guild
@@ -112,44 +118,47 @@ class Wormhole(commands.Cog):
                 message.reference.channel_id,
                 message.reference.message_id,
             )
-            if referenced_msg:
-                if (
-                    message.reference
-                    and message.reference.type == MessageReferenceType.reply
-                ):
-                    msg_tmp = (
-                        "> " + referenced_msg.content.replace("\n", "\n> ")
+            if (
+                message.reference
+                and message.reference.type == MessageReferenceType.reply
+            ):
+                msg_tmp = (
+                    "> " + referenced_msg.content.replace("\n", "\n> ")
+                    if referenced_msg and referenced_msg.content
+                    else _(gtx, "Unknown reference message")
+                )
+                msg = ""
+                for m in msg_tmp.strip().split("\n"):
+                    if not m.startswith("> >"):
+                        msg += m + "\n"
+                formatted_message = f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+            elif (
+                message.reference
+                and message.reference.type == MessageReferenceType.forward
+            ):
+                guild_display_ = (
+                    await self._get_guild_display(referenced_msg.guild, gtx)
+                    if referenced_msg
+                    else ""
+                )
+                formatted_message = (
+                    f"**{guild_display} {message.author.name}** _{_(gtx, 'forwarded message from')} "
+                    + (
+                        (guild_display_ + " " + referenced_msg.author.name)
+                        if referenced_msg
+                        and referenced_msg.author
+                        and referenced_msg.author.name
+                        else _(gtx, "Unknow author")
+                    )
+                    + "_ ```"
+                    + (
+                        referenced_msg.content.replace("```", "")
                         if referenced_msg and referenced_msg.content
-                        else _(gtx, "Unknown reference message")
+                        else _(gtx, "Unknown forwarded message")
                     )
-                    msg = ""
-                    for m in msg_tmp.strip().split("\n"):
-                        if not m.startswith("> >"):
-                            msg += m + "\n"
-                    formatted_message = f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
-                elif (
-                    message.reference
-                    and message.reference.type == MessageReferenceType.forward
-                ):
-                    guild_display_ = await self._get_guild_display(
-                        referenced_msg.guild, gtx
-                    )
-                    formatted_message = (
-                        f"**{guild_display} {message.author.name}** _{_(gtx, 'forwarded message from')} "
-                        + (
-                            (guild_display_ + " " + referenced_msg.author.name)
-                            if referenced_msg.author and referenced_msg.author.name
-                            else _(gtx, "Unknow author")
-                        )
-                        + "_ ```"
-                        + (
-                            referenced_msg.content.replace("```", "")
-                            if referenced_msg and referenced_msg.content
-                            else _(gtx, "Unknown forwarded message")
-                        )
-                        + "```"
-                    )
-        if formatted_message == "":
+                    + "```"
+                )
+        else:
             formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         # add stickers from servers to message

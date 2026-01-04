@@ -4,8 +4,11 @@ msgstr Neznámy server
 msgid Unknown reference message
 msgstr Odpoveď na neznámu správu
 
-msgid Forwarded
-msgstr Preposlal
+msgid forwarded message from
+msgstr preposlal správu od
+
+msgid Unknow author
+msgstr Neznámy autor
 
 msgid Unknown forwarded message
 msgstr Neznáma preposlaná správa

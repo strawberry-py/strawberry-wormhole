@@ -142,7 +142,7 @@ class Wormhole(commands.Cog):
                     else ""
                 )
                 formatted_message = (
-                    f"**{guild_display} {message.author.name}** _{_(gtx, 'forwarded message from')} "
+                    f"**{guild_display} {message.author.name}** *{_(gtx, 'forwarded message from')}* **"
                     + (
                         (guild_display_ + " " + referenced_msg.author.name)
                         if referenced_msg
@@ -150,7 +150,7 @@ class Wormhole(commands.Cog):
                         and referenced_msg.author.name
                         else _(gtx, "Unknow author")
                     )
-                    + "_ ```"
+                    + "** ```"
                     + (
                         referenced_msg.content.replace("```", "")
                         if referenced_msg and referenced_msg.content

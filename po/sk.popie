@@ -4,16 +4,16 @@ msgstr Neznámy server
 msgid Unknown reference message
 msgstr Odpoveď na neznámu správu
 
-msgid forwarded message from
-msgstr preposlal správu od
-
-msgid Unknow author
+msgid Unknown author
 msgstr Neznámy autor
 
 msgid Unknown forwarded message
 msgstr Neznáma preposlaná správa
 
-msgid I do not have proper permissions to set slow mode. Some channel may need manual intervention.
+msgid forwarded message from
+msgstr preposlal správu od
+
+msgid I do not have proper permissions to set slow mode. Some channels may need manual intervention.
 msgstr Nemám dostatočné oprávnenia na nastavenie spomaleného režimu. Niektoré kanály môžu vyžadovať manuálny zásah.
 
 msgid Slow mode set to {delay} seconds.

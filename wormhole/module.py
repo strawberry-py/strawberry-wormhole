@@ -1,7 +1,6 @@
 import io
 import re
 import unicodedata
-from typing import Optional
 
 import discord
 from discord import MessageReferenceType, app_commands
@@ -14,6 +13,9 @@ from .database import (  # Local database model for managing wormhole channels
     WormholeChannel,
 )
 
+# Constants
+STICKER_INVISIBLE_LINK_FORMAT = "[.]({url})"
+
 # Setup for internationalization (i18n) and logging
 _ = i18n.Translator("modules/wormhole").translate
 bot_log = logger.Bot.logger()
@@ -24,8 +26,6 @@ class Wormhole(commands.Cog):
     """
     This Cog handles message relaying (a "wormhole") across multiple channels in different guilds.
     """
-
-    wormhole_channels: list[int] = []
 
     wormhole: app_commands.Group = app_commands.Group(
         name="wormhole",
@@ -48,7 +48,7 @@ class Wormhole(commands.Cog):
 
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
-        self.wormhole_channels = WormholeChannel.get_channel_ids()
+        self.wormhole_channels: list[int] = WormholeChannel.get_channel_ids()
         self.restore_slowmode.start()
 
     @tasks.loop(seconds=2.0, count=1)
@@ -58,17 +58,17 @@ class Wormhole(commands.Cog):
         await self._set_slowmode(delay)
 
     @restore_slowmode.before_loop
-    async def before_restore_slowmode(self):
+    async def before_restore_slowmode(self) -> None:
         """Ensures that bot is ready before restoring slowmode"""
         await self.bot.wait_until_ready()
 
     # HELPER FUNCTIONS
 
-    def _remove_accents(self, input_str):
+    def _remove_accents(self, input_str: str) -> str:
         nfkd_form = unicodedata.normalize("NFKD", input_str)
         return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-    async def _get_guild_display(self, guild: discord.Guild, gtx):
+    async def _get_guild_display(self, guild: discord.Guild, gtx) -> str:
         """Helper function for getting guild display name for _message_formatter
 
         :param guild: discord.Guild to which display will be created
@@ -90,8 +90,74 @@ class Wormhole(commands.Cog):
                 break
         return str(emoji) if emoji else f"[{guild.name}]"
 
+    async def _format_reply_message(
+        self,
+        message: discord.Message,
+        referenced_msg: discord.Message | None,
+        guild_display: str,
+        marks_to_add_to_start: str,
+        gtx,
+    ) -> str:
+        """Format a reply-type message.
+
+        :param message: Original discord message
+        :param referenced_msg: Referenced message being replied to
+        :param guild_display: Display name/emoji for guild
+        :param marks_to_add_to_start: Markdown marks to preserve
+        :param gtx: Translation context
+        :return: Formatted reply message
+        """
+        msg_tmp = (
+            "> " + referenced_msg.content.replace("\n", "\n> ")
+            if referenced_msg and referenced_msg.content
+            else _(gtx, "Unknown reference message")
+        )
+        msg = ""
+        for m in msg_tmp.strip().split("\n"):
+            if not m.startswith("> >"):
+                msg += m + "\n"
+        return f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+
+    async def _format_forward_message(
+        self,
+        message: discord.Message,
+        referenced_msg: discord.Message | None,
+        guild_display: str,
+        gtx,
+    ) -> str:
+        """Format a forwarded message.
+
+        :param message: Original discord message
+        :param referenced_msg: Referenced message being forwarded
+        :param guild_display: Display name/emoji for guild
+        :param gtx: Translation context
+        :return: Formatted forward message
+        """
+        guild_display_ = (
+            await self._get_guild_display(referenced_msg.guild, gtx)
+            if referenced_msg
+            else ""
+        )
+        author_info = (
+            (guild_display_ + " " + referenced_msg.author.name)
+            if referenced_msg and referenced_msg.author and referenced_msg.author.name
+            else _(gtx, "Unknown author")
+        )
+        message_content = (
+            referenced_msg.content.replace("```", "")
+            if referenced_msg and referenced_msg.content
+            else _(gtx, "Unknown forwarded message")
+        )
+        return (
+            f"**{guild_display} {message.author.name}** *{_(gtx, 'forwarded message from')}* **"
+            + author_info
+            + "** ```"
+            + message_content
+            + "```"
+        )
+
     async def _message_formatter(
-        self, message: discord.Message, stickers: list = None
+        self, message: discord.Message, stickers: list[str] | None = None
     ) -> str:
         """Helper function to format wormhole message.
 
@@ -112,7 +178,7 @@ class Wormhole(commands.Cog):
         formatted_message = ""
 
         if message.reference:
-            referenced_msg: discord.Message = await utils.discord.get_message(
+            referenced_msg: discord.Message | None = await utils.discord.get_message(
                 self.bot,
                 message.reference.guild_id,
                 message.reference.channel_id,
@@ -122,53 +188,29 @@ class Wormhole(commands.Cog):
                 message.reference
                 and message.reference.type == MessageReferenceType.reply
             ):
-                msg_tmp = (
-                    "> " + referenced_msg.content.replace("\n", "\n> ")
-                    if referenced_msg and referenced_msg.content
-                    else _(gtx, "Unknown reference message")
+                formatted_message = await self._format_reply_message(
+                    message, referenced_msg, guild_display, marks_to_add_to_start, gtx
                 )
-                msg = ""
-                for m in msg_tmp.strip().split("\n"):
-                    if not m.startswith("> >"):
-                        msg += m + "\n"
-                formatted_message = f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
             elif (
                 message.reference
                 and message.reference.type == MessageReferenceType.forward
             ):
-                guild_display_ = (
-                    await self._get_guild_display(referenced_msg.guild, gtx)
-                    if referenced_msg
-                    else ""
-                )
-                formatted_message = (
-                    f"**{guild_display} {message.author.name}** *{_(gtx, 'forwarded message from')}* **"
-                    + (
-                        (guild_display_ + " " + referenced_msg.author.name)
-                        if referenced_msg
-                        and referenced_msg.author
-                        and referenced_msg.author.name
-                        else _(gtx, "Unknow author")
-                    )
-                    + "** ```"
-                    + (
-                        referenced_msg.content.replace("```", "")
-                        if referenced_msg and referenced_msg.content
-                        else _(gtx, "Unknown forwarded message")
-                    )
-                    + "```"
+                formatted_message = await self._format_forward_message(
+                    message, referenced_msg, guild_display, gtx
                 )
         else:
             formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
 
         # add stickers from servers to message
         for s in stickers or []:
-            formatted_message = formatted_message.rstrip() + f"[.]({s})"
+            formatted_message = (
+                formatted_message.rstrip() + STICKER_INVISIBLE_LINK_FORMAT.format(url=s)
+            )
         return formatted_message
 
     async def _set_slowmode(
-        self, delay: int, itx: Optional[discord.Interaction] = None
-    ):
+        self, delay: int, itx: discord.Interaction | None = None
+    ) -> None:
         """Helper function to set slowmode on Wormhole channels.
 
         If ITX is provided, it also handles the interaction response.
@@ -197,7 +239,7 @@ class Wormhole(commands.Cog):
                 await itx.response.send_message(
                     _(
                         itx,
-                        "I do not have proper permissions to set slow mode. Some channel may need manual intervention.",
+                        "I do not have proper permissions to set slow mode. Some channels may need manual intervention.",
                     ),
                     ephemeral=True,
                 )
@@ -216,7 +258,7 @@ class Wormhole(commands.Cog):
     # LISTENERS
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: discord.Message) -> None:
         """Main message relay logics."""
         # Ignore bot messages
         if message.author.bot:
@@ -239,14 +281,21 @@ class Wormhole(commands.Cog):
                 attachments_list.append([tmp, a.filename, a.is_spoiler()])
 
         # discord default stickers cant be resent by url
-        saved_stickers: list = []
+        saved_stickers: list[str] = []
         discord_stickers: list = []
         for s in message.stickers or []:
-            sticker = await s.fetch()
-            if isinstance(sticker, discord.sticker.StandardSticker):
-                discord_stickers.append(sticker)
-            elif isinstance(sticker, discord.sticker.GuildSticker):
-                saved_stickers.append(s.url)  # save custom stickers
+            try:
+                sticker = await s.fetch()
+                if isinstance(sticker, discord.sticker.StandardSticker):
+                    discord_stickers.append(sticker)
+                elif isinstance(sticker, discord.sticker.GuildSticker):
+                    saved_stickers.append(s.url)  # save custom stickers
+            except (discord.HTTPException, discord.NotFound) as e:
+                await bot_log.warning(
+                    message.author,
+                    message.channel,
+                    f"Failed to fetch sticker: {e}",
+                )
 
         try:
             await message.delete()  # Delete original user message
@@ -256,6 +305,12 @@ class Wormhole(commands.Cog):
                 message.channel,
                 "Missing permissions to delete message.",
             )
+        except (discord.HTTPException, discord.NotFound) as e:
+            await bot_log.error(
+                message.author,
+                message.channel,
+                f"Failed to delete message: {e}",
+            )
 
         gtx = i18n.TranslationContext(message.guild.id, message.author.id)
         formatted_message_parts = utils.text.smart_split(
@@ -263,24 +318,36 @@ class Wormhole(commands.Cog):
             mark_continuation=_(gtx, "***Continuation***") + "\n",
         )  # Format message
 
-        files_list = []
-        for attachment in attachments_list:
-            files_list.append(
-                discord.File(attachment[0], attachment[1], spoiler=attachment[2])
-            )
-
         # Send to all wormhole channels
-        for channel in self.wormhole_channels:
-            target_channel = self.bot.get_channel(channel)
+        for channel_id in self.wormhole_channels:
+            target_channel = self.bot.get_channel(channel_id)
             if target_channel:
                 try:
-                    for message_part in formatted_message_parts:
+                    for idx, message_part in enumerate(formatted_message_parts):
+                        # Create files and attach stickers only for the last message part
+                        files_to_send = []
+                        stickers_to_send = []
+
+                        if idx == len(formatted_message_parts) - 1:
+                            # Create fresh File objects for this channel
+                            for attachment in attachments_list:
+                                files_to_send.append(
+                                    discord.File(
+                                        attachment[0],
+                                        attachment[1],
+                                        spoiler=attachment[2],
+                                    )
+                                )
+                            stickers_to_send = discord_stickers
+
                         await target_channel.send(
                             message_part,
-                            files=files_list,
-                            stickers=discord_stickers,
+                            files=files_to_send,
+                            stickers=stickers_to_send,
                             allowed_mentions=discord.AllowedMentions.none(),
                         )
+
+                    # Reset BytesIO streams for next channel
                     for attachment in attachments_list:
                         attachment[0].seek(0)
                 except discord.Forbidden:
@@ -288,6 +355,18 @@ class Wormhole(commands.Cog):
                         message.author,
                         target_channel,
                         "Missing permissions to send the message.",
+                    )
+                except discord.HTTPException as e:
+                    await bot_log.error(
+                        message.author,
+                        target_channel,
+                        f"Failed to send message: {e}",
+                    )
+                except Exception as e:
+                    await bot_log.error(
+                        message.author,
+                        target_channel,
+                        f"Unexpected error sending message: {e}",
                     )
 
     # COMMANDS
@@ -299,7 +378,7 @@ class Wormhole(commands.Cog):
     )
     async def set_wormhole_channel(
         self, itx: discord.Interaction, channel: discord.TextChannel
-    ):
+    ) -> None:
         """
         Register a channel as a wormhole. All messages in this channel
         will be deleted and mirrored to all other wormhole channels.
@@ -340,7 +419,7 @@ class Wormhole(commands.Cog):
         name="list",
         description="List all channels registered as wormholes.",
     )
-    async def list_wormhole_channel(self, itx: discord.Interaction):
+    async def list_wormhole_channel(self, itx: discord.Interaction) -> None:
         """
         List all channels registered as wormholes.
         """
@@ -403,7 +482,7 @@ class Wormhole(commands.Cog):
     )
     async def unset_wormhole_channel(
         self, itx: discord.Interaction, channel: discord.TextChannel
-    ):
+    ) -> None:
         """Unregister a channel from the wormhole."""
         if not WormholeChannel.check_existence(channel.id):
             await itx.response.send_message(
@@ -442,7 +521,7 @@ class Wormhole(commands.Cog):
         description="Apply slowmode to all wormhole channels.",
     )
     @app_commands.describe(delay="Time in seconds")
-    async def set_wormhole_slowmode(self, itx: discord.Interaction, delay: int):
+    async def set_wormhole_slowmode(self, itx: discord.Interaction, delay: int) -> None:
         """Apply slowmode to all wormhole channels."""
         if delay < 0:
             await itx.response.send_message(
@@ -459,7 +538,7 @@ class Wormhole(commands.Cog):
         name="remove",
         description="Disable slowmode in all wormhole channels.",
     )
-    async def remove_wormhole_slowmode(self, itx: commands.Context):
+    async def remove_wormhole_slowmode(self, itx: discord.Interaction) -> None:
         """Disable slowmode in all wormhole channels."""
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)

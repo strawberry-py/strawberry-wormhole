@@ -278,23 +278,8 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
-        # Check ban list
-        if message.author.name in self.ban_list.keys():
-            if not self.ban_list[message.author.name]:
-                return
-            if datetime.datetime.utcnow() > self.ban_list[message.author.name]:
-                banned_users = BanTimeout.get(message.author.name)
-                banned_user = banned_users[0] if banned_users else None
-                banned_user.delete()
-                del self.ban_list[message.author.name]
-
-                await bot_log.info(
-                    None,
-                    None,
-                    f"Ban of user {message.author.name} has expired.",
-                )
-            else:
-                return
+        if await self.check_if_member_banned(message):
+            return
 
         attachments_list: list = []
 
@@ -394,6 +379,27 @@ class Wormhole(commands.Cog):
                     )
 
     # COMMANDS
+
+    async def check_if_member_banned(self, message: discord.Message) -> bool:
+        # Check ban list
+        if message.author.name in self.ban_list.keys():
+            if not self.ban_list[message.author.name]:
+                return False
+            if datetime.datetime.utcnow() > self.ban_list[message.author.name]:
+                banned_users = BanTimeout.get(message.author.name)
+                banned_user = banned_users[0] if banned_users else None
+                banned_user.delete()
+                del self.ban_list[message.author.name]
+
+                await bot_log.info(
+                    None,
+                    None,
+                    f"Ban of user {message.author.name} has expired.",
+                )
+                return False
+            else:
+                return True
+        return False
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(

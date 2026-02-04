@@ -25,21 +25,6 @@ class WormholeChannel(database.base):
         return query
 
     @classmethod
-    def get(cls, guild_id: int) -> Optional[WormholeChannel]:
-        """
-        Retrieves the first WormholeChannel with the given guild_id.
-        TODO: Change to return a list if multiple entries can exist.
-        """
-        query = (
-            session.query(cls)
-            .filter_by(
-                guild_id=guild_id,
-            )
-            .one_or_none()
-        )
-        return query
-
-    @classmethod
     def remove(cls, guild_id: int, channel_id: int) -> int:
         """
         Removes the WormholeChannel entry matching the given guild_id and channel_id.
@@ -62,7 +47,13 @@ class WormholeChannel(database.base):
         Checks whether an entry exists with the given channel_id.
         Returns True if exists, False otherwise.
         """
-        return session.query(cls).filter_by(channel_id=channel_id).first() is not None
+        return (
+            session.query(cls.channel_id)
+            .filter_by(channel_id=channel_id)
+            .limit(1)
+            .scalar()
+            is not None
+        )
 
     @classmethod
     def get_channel_ids(cls) -> list[int]:
@@ -81,7 +72,7 @@ class WormholeChannel(database.base):
         result = session.query(cls.guild_id).filter_by(channel_id=channel_id).first()
         return result[0] if result else None
 
-    def save(self):
+    def save(self) -> None:
         """
         Commits any changes made to the current instance to the database.
         """

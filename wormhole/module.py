@@ -600,7 +600,7 @@ class Wormhole(commands.Cog):
         self.ban_list.update({user.name: ban_end})
         if time:
             await itx.response.send_message(
-                _(itx, "User {username} was blocked or {seconds} seconds.").format(
+                _(itx, "User {username} was blocked for {seconds} seconds.").format(
                     username=user.name, seconds=time
                 ),
                 ephemeral=True,

@@ -49,7 +49,7 @@ msgstr Zpoždění musí být 0 nebo více.
 msgid This user is already banned.
 msgstr Tento uživatel je již zablokován.
 
-msgid User {username} was blocked or {seconds} seconds.
+msgid User {username} was blocked for {seconds} seconds.
 msgstr Uživatel {username} byl zablokován na {seconds} sekund.
 
 msgid User {username} was blocked.

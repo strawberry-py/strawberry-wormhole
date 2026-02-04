@@ -49,7 +49,7 @@ msgstr Oneskorenie musí byť 0 alebo viac.
 msgid This user is already banned.
 msgstr Tento používateľ je už zablokovaný.
 
-msgid User {username} was blocked or {seconds} seconds.
+msgid User {username} was blocked for {seconds} seconds.
 msgstr Používateľ {username} bol zablokovaný na {seconds} sekúnd.
 
 msgid User {username} was blocked.

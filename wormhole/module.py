@@ -127,7 +127,11 @@ class Wormhole(commands.Cog):
         for m in msg_tmp.strip().split("\n"):
             if not m.startswith("> >"):
                 msg += m + "\n"
-        return f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+
+        new_content = message.content
+        for key in self.patterns.keys():
+            new_content = re.sub(key, self.patterns[key], new_content)
+        return f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
     async def _format_forward_message(
         self,
@@ -214,7 +218,7 @@ class Wormhole(commands.Cog):
                     message, referenced_msg, guild_display, gtx
                 )
         else:
-            formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+            formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
         # add stickers from servers to message
         for s in stickers or []:

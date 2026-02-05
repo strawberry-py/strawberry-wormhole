@@ -189,7 +189,7 @@ class Wormhole(commands.Cog):
         new_content = message.content
         for key in self.patterns.keys():
             new_content = re.sub(key, self.patterns[key], new_content)
-        
+
         formatted_message = ""
 
         if message.reference:

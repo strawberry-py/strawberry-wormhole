@@ -54,17 +54,6 @@ msgstr Používateľ {username} bol zablokovaný na {seconds} sekúnd.
 
 msgid User {username} was blocked.
 msgstr Používateľ {username} bol zablokovaný.
-msgid Pattern already exists. No was pattern created.
-msgstr Vzor už existuje. Nebol vytvorený žiadny vzor.
-
-msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
-msgstr Vzor `{pattern}: {replacement}` bol pridaný do zoznamu vzorov.
-
-msgid Pattern with id `{idx}` was not found.
-msgstr Vzor s ID `{idx}` nebol nájdený.
-
-msgid Pattern id {idx} was updated.
-msgstr Vzor s ID {idx} bol aktualizovaný.
 
 msgid ID
 msgstr ID
@@ -77,6 +66,19 @@ msgstr Čas
 
 msgid User {username} was unblocked.
 msgstr Používateľ {username} bol odblokovaný.
+
+msgid Pattern already exists. No was pattern created.
+msgstr Vzor už existuje. Nebol vytvorený žiadny vzor.
+
+msgid Pattern `{pattern}: {replacement}` was added to the list of patterns.
+msgstr Vzor `{pattern}: {replacement}` bol pridaný do zoznamu vzorov.
+
+msgid Pattern with id `{idx}` was not found.
+msgstr Vzor s ID `{idx}` nebol nájdený.
+
+msgid Pattern id {idx} was updated.
+msgstr Vzor s ID {idx} bol aktualizovaný.
+
 msgid Pattern
 msgstr Vzor
 

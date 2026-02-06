@@ -13,6 +13,7 @@ from pie.bot import Strawberry
 from .database import (  # Local database model for managing wormhole channels
     BanTimeout,
     WormholeChannel,
+    WormholePatterns,
 )
 
 # Constants
@@ -49,6 +50,12 @@ class Wormhole(commands.Cog):
     wormhole_slowmode: app_commands.Group = app_commands.Group(
         name="slowmode",
         description="Set of configuration for wormhole slow mode.",
+        parent=wormhole,
+    )
+
+    wormhole_pattern: app_commands.Group = app_commands.Group(
+        name="pattern",
+        description="Set of configuration for wormhole message moderation with regex patterns.",
         parent=wormhole,
     )
 
@@ -124,7 +131,11 @@ class Wormhole(commands.Cog):
         for m in msg_tmp.strip().split("\n"):
             if not m.startswith("> >"):
                 msg += m + "\n"
-        return f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+
+        new_content = message.content
+        for key in self.patterns.keys():
+            new_content = re.sub(key, self.patterns[key], new_content)
+        return f"> {msg.rstrip()}\n**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
     async def _format_forward_message(
         self,
@@ -183,6 +194,10 @@ class Wormhole(commands.Cog):
             "\n" if any(message.content.startswith(m) for m in marks) else ""
         )
 
+        new_content = message.content
+        for key in self.patterns.keys():
+            new_content = re.sub(key, self.patterns[key], new_content)
+
         formatted_message = ""
 
         if message.reference:
@@ -207,7 +222,7 @@ class Wormhole(commands.Cog):
                     message, referenced_msg, guild_display, gtx
                 )
         else:
-            formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + message.content}\n"
+            formatted_message = f"**{guild_display} {message.author.name}:** {marks_to_add_to_start + new_content}\n"
 
         # add stickers from servers to message
         for s in stickers or []:
@@ -855,6 +870,7 @@ class Wormhole(commands.Cog):
                 f"Pattern '{pattern}' was not found in the list of patterns therefore it could not be removed.",
             )
         return
+
 
 # Register the Cog with the bot
 async def setup(bot: Strawberry) -> None:

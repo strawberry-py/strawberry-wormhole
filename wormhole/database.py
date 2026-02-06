@@ -188,6 +188,8 @@ class BanTimeout(database.base):
             "name": self.name,
             "time": self.time,
         }
+
+
 class WormholePatterns(database.base):
     __tablename__ = "wormhole_wormhole_wormholepatterns"
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Column, DateTime, Integer, String
+from sqlalchemy import BigInteger, Column, DateTime, Integer, String, Text
 
 from pie.database import database, session
 
@@ -188,3 +188,81 @@ class BanTimeout(database.base):
             "name": self.name,
             "time": self.time,
         }
+class WormholePatterns(database.base):
+    __tablename__ = "wormhole_wormhole_wormholepatterns"
+
+    idx = Column(Integer, primary_key=True, autoincrement=True)
+    regex_pattern = Column(String(255), nullable=False)
+    replacement = Column(Text, nullable=False)
+
+    @classmethod
+    def set_pattern(cls, regex_pattern: str, replacement: str):
+        """
+        Adds a new pattern only if it does not already exist.
+        """
+        existing_pattern = (
+            session.query(cls).filter_by(regex_pattern=regex_pattern).first()
+        )
+        if existing_pattern:
+            raise ValueError(f"Pattern with regex '{regex_pattern}' already exists.")
+        new_pattern = cls(regex_pattern=regex_pattern, replacement=replacement)
+        session.add(new_pattern)
+        session.commit()
+        return new_pattern
+
+    @classmethod
+    def update_pattern(cls, idx: int, regex_pattern: str, replacement: str):
+        """
+        Updates an existing pattern based on idx.
+        """
+        pattern = session.query(cls).filter_by(idx=idx).first()
+        if not pattern:
+            raise ValueError(f"No pattern found with idx {idx}.")
+
+        pattern.regex_pattern = regex_pattern
+        pattern.replacement = replacement
+
+        session.commit()
+        return pattern
+
+    @classmethod
+    def get_patterns_dict(cls) -> dict:
+        """
+        Fetches all WormholePatterns entries and returns a dict:
+        { regex_pattern: replacement }
+        """
+        return {row.regex_pattern: row.replacement for row in session.query(cls).all()}
+
+    @classmethod
+    def get_patterns(cls):
+        """
+        Retrieve all wormhole patterns from the database.
+
+        :param session: SQLAlchemy session object
+        :return: List of WormholePatterns objects
+        """
+        return session.query(cls).all()
+
+    @classmethod
+    def get(cls, idx: int):
+        """
+        Retrieve all rows matching a given id.
+
+        Args:
+            idx (int): The id to filter by.
+
+        Returns:
+            list: A list of matching objects.
+        """
+        query = session.query(cls).filter_by(idx=idx)
+        return query.all()
+
+    def delete(self):
+        """
+        Delete the current object from the database.
+        """
+        session.delete(self)
+        session.commit()
+
+    def __repr__(self):
+        return f"<WormholePatterns(id={self.idx}, regex_pattern='{self.regex_pattern}', replacement='{self.replacement}')>"

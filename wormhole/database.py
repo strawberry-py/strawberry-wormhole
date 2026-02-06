@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Column, Integer, String, Text
+from sqlalchemy import BigInteger, Column, DateTime, Integer, String, Text
 
 from pie.database import database, session
 
@@ -92,6 +92,101 @@ class WormholeChannel(database.base):
         return {
             "guild_id": self.guild_id,
             "channel_id": self.channel_id,
+        }
+
+
+class BanTimeout(database.base):
+    __tablename__ = "wormhole_wormhole_bantimeout"
+
+    idx = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    time = Column(DateTime)
+
+    @classmethod
+    def add(cls, name: str, time=None):
+        """
+        Add a new record to the database.
+
+        Args:
+            name (str): The name to insert.
+            time (optional): An associated timestamp or value. Defaults to None.
+
+        Returns:
+            The newly created object after being committed to the database.
+        """
+        query = cls(name=name, time=time)
+        session.add(query)
+        session.commit()
+        return query
+
+    def delete(self):
+        """
+        Delete the current object from the database.
+        """
+        session.delete(self)
+        session.commit()
+
+    @classmethod
+    def get(cls, user: str):
+        """
+        Retrieve all rows matching a given user name.
+
+        Args:
+            user (str): The name to filter by.
+
+        Returns:
+            list: A list of matching objects.
+        """
+        query = session.query(cls).filter_by(name=user)
+        return query.all()
+
+    @classmethod
+    def get_all(cls):
+        """
+        Retrieve all rows from the database table.
+
+        Returns:
+            list: A list of all objects of this class.
+        """
+        query = session.query(cls).all()
+        return query
+
+    @classmethod
+    def get_dict(cls):
+        """
+        Retrieve all rows and return them as a dictionary mapping name -> time.
+
+        Returns:
+            dict: A dictionary where keys are names and values are times.
+        """
+        ban_list = {}
+        results = session.query(cls).all()
+        for r in results:
+            ban_list.update({r.name: r.time})
+        return ban_list
+
+    def __repr__(self) -> str:
+        """
+        Provide a developer-friendly string representation of the object.
+
+        Returns:
+            str: String representation including class name, idx, and name.
+        """
+        return (
+            f'<{self.__class__.__name__} idx="{self.idx}" '
+            f'name="{self.name}" time="{self.time}" '
+        )
+
+    def dump(self) -> dict:
+        """
+        Convert the object into a serializable dictionary.
+
+        Returns:
+            dict: A dictionary containing the 'name' and 'time' fields.
+        """
+        return {
+            "name": self.name,
+            "time": self.time,
         }
 
 

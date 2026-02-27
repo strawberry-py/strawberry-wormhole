@@ -1,3 +1,4 @@
+import datetime
 import io
 import re
 import unicodedata
@@ -10,6 +11,7 @@ from pie import check, i18n, logger, storage, utils
 from pie.bot import Strawberry
 
 from .database import (  # Local database model for managing wormhole channels
+    BanTimeout,
     WormholeChannel,
     WormholePatterns,
 )
@@ -29,6 +31,7 @@ class Wormhole(commands.Cog):
     """
 
     wormhole_channels: list[int] = []
+    ban_list: dict = {}
     patterns = {}
 
     wormhole: app_commands.Group = app_commands.Group(
@@ -59,6 +62,7 @@ class Wormhole(commands.Cog):
     def __init__(self, bot: Strawberry):
         self.bot: Strawberry = bot
         self.wormhole_channels: list[int] = WormholeChannel.get_channel_ids()
+        self.ban_list = BanTimeout.get_dict()
         self.patterns = WormholePatterns.get_patterns_dict()
         self.restore_slowmode.start()
 
@@ -291,6 +295,9 @@ class Wormhole(commands.Cog):
         if message.channel.id not in self.wormhole_channels:
             return
 
+        if await self.check_if_member_banned(message):
+            return
+
         attachments_list: list = []
 
         if message.attachments:
@@ -389,6 +396,27 @@ class Wormhole(commands.Cog):
                     )
 
     # COMMANDS
+
+    async def check_if_member_banned(self, message: discord.Message) -> bool:
+        # Check ban list
+        if message.author.name in self.ban_list.keys():
+            if not self.ban_list[message.author.name]:
+                return False
+            if datetime.datetime.utcnow() > self.ban_list[message.author.name]:
+                banned_users = BanTimeout.get(message.author.name)
+                banned_user = banned_users[0] if banned_users else None
+                banned_user.delete()
+                del self.ban_list[message.author.name]
+
+                await bot_log.info(
+                    None,
+                    None,
+                    f"Ban of user {message.author.name} has expired.",
+                )
+                return False
+            else:
+                return True
+        return False
 
     @check.acl2(check.ACLevel.BOT_OWNER)
     @wormhole_channel.command(
@@ -561,6 +589,118 @@ class Wormhole(commands.Cog):
         """Disable slowmode in all wormhole channels."""
         storage.set(self, 0, key="wormhole_slowmode", value=0)
         await self._set_slowmode(0, itx)
+
+    @check.acl2(check.ACLevel.BOT_OWNER)
+    @wormhole.command(
+        name="ban",
+        description="Ban user from sending messages into wormhole.",
+    )
+    @app_commands.describe(time="Time in seconds")
+    async def wormhole_ban_user(
+        self, itx: discord.Interaction, user: discord.User, time: int = None
+    ):
+        """
+        Ban user from sending messages into wormhole.
+        """
+        if user.name in self.ban_list.keys():
+            await itx.response.send_message(
+                _(itx, "This user is already banned."), ephemeral=True
+            )
+            return
+
+        if time:
+            ban_end = datetime.datetime.utcnow() + datetime.timedelta(seconds=time)
+        else:
+            ban_end = None
+
+        BanTimeout.add(name=user.name, time=ban_end)
+        self.ban_list.update({user.name: ban_end})
+        if time:
+            await itx.response.send_message(
+                _(itx, "User {username} was blocked for {seconds} seconds.").format(
+                    username=user.name, seconds=time
+                ),
+                ephemeral=True,
+            )
+            await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"User {user.name} was banned from wormhole for {time} seconds.",
+            )
+        else:
+            await itx.response.send_message(
+                _(itx, "User {username} was blocked.").format(username=user.name),
+                ephemeral=True,
+            )
+            await bot_log.info(
+                itx.user if itx else None,
+                itx.channel if itx else None,
+                f"User {user.name} was banned from wormhole.",
+            )
+
+    @check.acl2(check.ACLevel.SUBMOD)
+    @wormhole.command(
+        name="banlist",
+        description="List banned users.",
+    )
+    async def wormhole_list_banned(self, itx: discord.Interaction):
+        """
+        List banned users.
+        """
+
+        class Item:
+            def __init__(self, pattern):
+                self.idx = pattern.idx
+                self.name = pattern.name
+                self.time = pattern.time
+
+        bantimout = BanTimeout.get_all()
+        items = [Item(bt) for bt in bantimout]
+
+        table: list[str] = utils.text.create_table(
+            items,
+            header={
+                "idx": _(itx, "ID"),
+                "name": _(itx, "Name"),
+                "time": _(itx, "Time"),
+            },
+        )
+
+        await itx.response.send_message(content="```" + table[0] + "```")
+        for page in table[1:]:
+            await itx.followup.send("```" + page + "```")
+
+        await guild_log.info(
+            itx.user,
+            itx.channel,
+            "User used list wormhole ban and timeout command.",
+        )
+        return
+
+    @check.acl2(check.ACLevel.BOT_OWNER)
+    @wormhole.command(
+        name="unban",
+        description="Remove ban for user.",
+    )
+    async def wormhole_unban_user(self, itx: discord.Interaction, user: discord.User):
+        """
+        Remove ban for user.
+        """
+        banned_users = BanTimeout.get(user.name)
+        banned_user = banned_users[0] if banned_users else None
+        banned_user.delete()
+        del self.ban_list[user.name]
+
+        await itx.response.send_message(
+            _(itx, "User {username} was unblocked.").format(username=user.name),
+            ephemeral=True,
+        )
+        await bot_log.info(
+            itx.user if itx else None,
+            itx.channel if itx else None,
+            f"User {user.name} was unblocked from accessing wormhole.",
+        )
+        return
 
     @check.acl2(check.ACLevel.MOD)
     @wormhole_pattern.command(

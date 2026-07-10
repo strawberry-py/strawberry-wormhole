@@ -46,6 +46,27 @@ msgstr Kanál `{channel_name}` bol odstránený ako wormhole kanál.
 msgid Delay should be 0 or more.
 msgstr Oneskorenie musí byť 0 alebo viac.
 
+msgid This user is already banned.
+msgstr Tento používateľ je už zablokovaný.
+
+msgid User {username} was blocked for {seconds} seconds.
+msgstr Používateľ {username} bol zablokovaný na {seconds} sekúnd.
+
+msgid User {username} was blocked.
+msgstr Používateľ {username} bol zablokovaný.
+
+msgid ID
+msgstr ID
+
+msgid Name
+msgstr Meno
+
+msgid Time
+msgstr Čas
+
+msgid User {username} was unblocked.
+msgstr Používateľ {username} bol odblokovaný.
+
 msgid Pattern already exists. No was pattern created.
 msgstr Vzor už existuje. Nebol vytvorený žiadny vzor.
 
@@ -57,9 +78,6 @@ msgstr Vzor s ID `{idx}` nebol nájdený.
 
 msgid Pattern id {idx} was updated.
 msgstr Vzor s ID {idx} bol aktualizovaný.
-
-msgid ID
-msgstr ID
 
 msgid Pattern
 msgstr Vzor
